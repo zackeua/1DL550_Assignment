@@ -19,13 +19,11 @@
 
 void Ped::Model::thread_tick(Ped::Model* model, int low, int high) {
 	while (1) {
-		if (do_step)
 		for (int i = low; i < high; i++) {
 			model->agents[i]->computeNextDesiredPosition();
 			model->agents[i]->setX(model->agents[i]->getDesiredX());
 			model->agents[i]->setY(model->agents[i]->getDesiredY());
 		}
-
 	}
 }
 
