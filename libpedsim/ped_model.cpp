@@ -17,6 +17,18 @@
 
 #include <stdlib.h>
 
+void Ped::Model::thread_tick(Ped::Model* model, int low, int high) {
+	while (1) {
+		if (do_step)
+		for (int i = low; i < high; i++) {
+			model->agents[i]->computeNextDesiredPosition();
+			model->agents[i]->setX(model->agents[i]->getDesiredX());
+			model->agents[i]->setY(model->agents[i]->getDesiredY());
+		}
+
+	}
+}
+
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
 {
 	// Convenience test: does CUDA work on this machine?
@@ -54,6 +66,30 @@ void Ped::Model::tick()
 				agents[i]->setX(agents[i]->getDesiredX());
 				agents[i]->setY(agents[i]->getDesiredY());
 			}
+			break;
+			
+		case IMPLEMENTATION::PTHREAD:
+			
+			int n = 16;
+			thread* worker = new thread[n];
+
+			int block_size = agents.size()%n;
+			
+			for (int i = 0; i < n; i++) {
+				int low = i * block_size;
+				int high = low + block_size;
+				if (i == n-1) {
+					high = agents.size();
+				}
+				worker[i] = thread(thread_tick, this, low , high);
+			}
+			
+			for (int i = 0; i < n; i++) {
+				worker[i].join();
+			}
+
+			delete[] worker;
+
 			break;
 	}
 }
