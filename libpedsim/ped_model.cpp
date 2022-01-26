@@ -38,6 +38,24 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 void Ped::Model::tick()
 {
 	// EDIT HERE FOR ASSIGNMENT 1
+	switch (this->implementation) {
+		case IMPLEMENTATION::SEQ:
+			for (int i = 0; i < agents.size(); i++) {
+				agents[i]->computeNextDesiredPosition();
+				agents[i]->setX(agents[i]->getDesiredX());
+				agents[i]->setY(agents[i]->getDesiredY());
+			}
+			break;
+
+		case IMPLEMENTATION::OMP:
+			#pragma omp parallel for schedule(guided)
+			for (int i = 0; i < agents.size(); i++) {
+				agents[i]->computeNextDesiredPosition();
+				agents[i]->setX(agents[i]->getDesiredX());
+				agents[i]->setY(agents[i]->getDesiredY());
+			}
+			break;
+	}
 }
 
 ////////////
