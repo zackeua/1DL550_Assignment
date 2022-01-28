@@ -39,6 +39,9 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Sets the chosen implemenation. Standard in the given code is SEQ
 	this->implementation = implementation;
 
+	// edit the number of threads here! 
+	this->num_threads = 1;
+
 	// Set up heatmap (relevant for Assignment 4)
 	setupHeatmapSeq();
 }
@@ -56,6 +59,8 @@ void Ped::Model::tick()
 			break;
 
 		case IMPLEMENTATION::OMP:
+			// sätt antal trådar
+			omp_set_num_threads(this->num_threads);
 			#pragma omp parallel for schedule(guided)
 			for (int i = 0; i < agents.size(); i++) {
 				agents[i]->computeNextDesiredPosition();
@@ -66,21 +71,20 @@ void Ped::Model::tick()
 			
 		case IMPLEMENTATION::PTHREAD:
 			
-			int n = 16;
-			thread* worker = new thread[n];
+			thread* worker = new thread[this->num_threads];
 
-			int block_size = agents.size()%n;
+			int block_size = agents.size()%(this->num_threads);
 			
-			for (int i = 0; i < n; i++) {
+			for (int i = 0; i < this->num_threads; i++) {
 				int low = i * block_size;
 				int high = low + block_size;
-				if (i == n-1) {
+				if (i == this->num_threads-1) {
 					high = agents.size();
 				}
 				worker[i] = thread(thread_tick, this, low , high);
 			}
 			
-			for (int i = 0; i < n; i++) {
+			for (int i = 0; i < this->num_threads; i++) {
 				worker[i].join();
 			}
 
