@@ -17,7 +17,13 @@
 
 #include <stdlib.h>
 
-void Ped::Model::thread_tick(Ped::Model* model, int low, int high) {
+void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
+	int block_size = model->agents.size()%(model->num_threads);
+	int low = thread_id * block_size;
+	int high = low + block_size;
+	if (thread_id == model->num_threads-1) {
+		high = model->agents.size();
+	}
 	for (int i = low; i < high; i++) {
 		model->agents[i]->computeNextDesiredPosition();
 		model->agents[i]->setX(model->agents[i]->getDesiredX());
@@ -28,7 +34,7 @@ void Ped::Model::thread_tick(Ped::Model* model, int low, int high) {
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
 {
 	// Convenience test: does CUDA work on this machine?
-	cuda_test();
+	//cuda_test();
 
 	// Set 
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
@@ -40,7 +46,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	this->implementation = implementation;
 
 	// edit the number of threads here! 
-	this->num_threads = 1;
+	this->num_threads = 8;
 
 	// Set up heatmap (relevant for Assignment 4)
 	setupHeatmapSeq();
@@ -61,7 +67,7 @@ void Ped::Model::tick()
 		case IMPLEMENTATION::OMP:
 			// sätt antal trådar
 			omp_set_num_threads(this->num_threads);
-			#pragma omp parallel for schedule(guided)
+			#pragma omp parallel for schedule(guided) 
 			for (int i = 0; i < agents.size(); i++) {
 				agents[i]->computeNextDesiredPosition();
 				agents[i]->setX(agents[i]->getDesiredX());
@@ -72,16 +78,9 @@ void Ped::Model::tick()
 		case IMPLEMENTATION::PTHREAD:
 			
 			thread* worker = new thread[this->num_threads];
-
-			int block_size = agents.size()%(this->num_threads);
 			
 			for (int i = 0; i < this->num_threads; i++) {
-				int low = i * block_size;
-				int high = low + block_size;
-				if (i == this->num_threads-1) {
-					high = agents.size();
-				}
-				worker[i] = thread(thread_tick, this, low , high);
+				worker[i] = thread(thread_tick, this, i);
 			}
 			
 			for (int i = 0; i < this->num_threads; i++) {

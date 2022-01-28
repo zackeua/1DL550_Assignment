@@ -51,10 +51,10 @@ namespace Ped{
 	private:
 
 		// Thread tick function, moves Tagent between id low and high
-		static void thread_tick(Ped::Model* model, int low, int high);
+		static void thread_tick(Ped::Model* model, int thread_id);
 
 		int num_threads;
-
+	
 		// Denotes which implementation (sequential, parallel implementations..)
 		// should be used for calculating the desired positions of
 		// agents (Assignment 1)
