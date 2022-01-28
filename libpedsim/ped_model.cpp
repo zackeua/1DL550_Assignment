@@ -31,7 +31,7 @@ void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
 	}
 }
 
-void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
+void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads)
 {
 	// Convenience test: does CUDA work on this machine?
 	//cuda_test();
@@ -46,7 +46,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	this->implementation = implementation;
 
 	// edit the number of threads here! 
-	this->num_threads = 16;
+	this->num_threads = num_threads;
 
 	// Set up heatmap (relevant for Assignment 4)
 	setupHeatmapSeq();

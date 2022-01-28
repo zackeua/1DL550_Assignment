@@ -31,7 +31,12 @@
 
 int main(int argc, char*argv[]) {
 	bool timing_mode = 0;
+	int num_threads = 1;
 	int i = 1;
+	// Change this variable when testing different versions of your code. 
+	// May need modification or extension in later assignments depending on your implementations
+	Ped::IMPLEMENTATION implementation_to_test = Ped::SEQ;
+
 	QString scenefile = "scenario.xml";
 
 	// Argument handling
@@ -46,8 +51,37 @@ int main(int argc, char*argv[]) {
 			}
 			else if (strcmp(&argv[i][2], "help") == 0)
 			{
-				cout << "Usage: " << argv[0] << " [--help] [--timing-mode] [scenario]" << endl;
+				cout << "Usage: " << argv[0] << " [--help] [--timing-mode] [--threads X (number of threads)] [-impl implementation (SEQ, OMP, PTHREAD)] [scenario]" << endl;
 				return 0;
+			}
+			else if (strcmp(&argv[i][2], "threads") == 0) {
+				i++;
+				num_threads = atoi(argv[i]);
+				std::cout << "Number of threads set: " << num_threads << std::endl;
+			}
+			else if (strcmp(&argv[i][2], "impl") == 0) {
+				i++;
+				if (strcmp(argv[i], "SEQ") == 0)
+				{
+					implementation_to_test = Ped::SEQ;
+					std::cout << "Implementation: SEQ" << std::endl;
+				}
+				else if (strcmp(argv[i], "OMP") == 0)
+				{
+					implementation_to_test = Ped::OMP;
+					std::cout << "Implementation: OpenMp" << std::endl;
+
+				}
+				else if (strcmp(argv[i], "PTHREAD") == 0)
+				{
+					implementation_to_test = Ped::PTHREAD;
+					std::cout << "Implementation: PTHREAD" << std::endl;
+				}
+				else {
+					implementation_to_test = Ped::SEQ;
+					std::cout << "Fallback implementation: SEQ" << std::endl;
+
+				}
 			}
 			else
 			{
@@ -67,7 +101,7 @@ int main(int argc, char*argv[]) {
 		// Reading the scenario file and setting up the crowd simulation model
 		Ped::Model model;
 		ParseScenario parser(scenefile);
-		model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQ);
+		model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQ, num_threads);
 
 		// Default number of steps to simulate. Feel free to change this.
 		const int maxNumberOfStepsToSimulate = 100000;
@@ -86,7 +120,7 @@ int main(int argc, char*argv[]) {
 			{
 				Ped::Model model;
 				ParseScenario parser(scenefile);
-				model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQ);
+				model.setup(parser.getAgents(), parser.getWaypoints(), Ped::SEQ, num_threads);
 				PedSimulation simulation(model, NULL, timing_mode);
 				// Simulation mode to use when profiling (without any GUI)
 				std::cout << "Running reference version...\n";
@@ -97,13 +131,11 @@ int main(int argc, char*argv[]) {
 				cout << "Reference time: " << duration_seq.count() << " milliseconds, " << fps_seq << " Frames Per Second." << std::endl;
 			}
 
-			// Change this variable when testing different versions of your code. 
-			// May need modification or extension in later assignments depending on your implementations
-			Ped::IMPLEMENTATION implementation_to_test = Ped::SEQ;
+			
 			{
 				Ped::Model model;
 				ParseScenario parser(scenefile);
-				model.setup(parser.getAgents(), parser.getWaypoints(), implementation_to_test);
+				model.setup(parser.getAgents(), parser.getWaypoints(), implementation_to_test, num_threads);
 				PedSimulation simulation(model, NULL, timing_mode);
 				// Simulation mode to use when profiling (without any GUI)
 				std::cout << "Running target version...\n";
