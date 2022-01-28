@@ -18,7 +18,7 @@
 #include <stdlib.h>
 
 void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
-	int block_size = model->agents.size()%(model->num_threads);
+	int block_size = model->agents.size()/(model->num_threads);
 	int low = thread_id * block_size;
 	int high = low + block_size;
 	if (thread_id == model->num_threads-1) {
@@ -46,7 +46,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	this->implementation = implementation;
 
 	// edit the number of threads here! 
-	this->num_threads = 8;
+	this->num_threads = 16;
 
 	// Set up heatmap (relevant for Assignment 4)
 	setupHeatmapSeq();
@@ -67,7 +67,7 @@ void Ped::Model::tick()
 		case IMPLEMENTATION::OMP:
 			// sätt antal trådar
 			omp_set_num_threads(this->num_threads);
-			#pragma omp parallel for schedule(guided) 
+			#pragma omp parallel for schedule(static) 
 			for (int i = 0; i < agents.size(); i++) {
 				agents[i]->computeNextDesiredPosition();
 				agents[i]->setX(agents[i]->getDesiredX());
