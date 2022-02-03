@@ -25,9 +25,10 @@ void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
 		high = model->agents.size();
 	}
 	for (int i = low; i < high; i++) {
-		model->agents[i]->computeNextDesiredPosition();
-		model->agents[i]->setX(model->agents[i]->getDesiredX());
-		model->agents[i]->setY(model->agents[i]->getDesiredY());
+		model->agents_array->computeNextDesiredPosition(i);
+		//model->agents[i]->computeNextDesiredPosition();
+		//model->agents[i]->setX(model->agents[i]->getDesiredX());
+		//model->agents[i]->setY(model->agents[i]->getDesiredY());
 	}
 }
 
@@ -38,6 +39,8 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 	// Set 
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
+
+	this->agents_array = new Tagents(agents);
 
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
@@ -58,9 +61,10 @@ void Ped::Model::tick()
 	switch (this->implementation) {
 		case IMPLEMENTATION::SEQ:
 			for (int i = 0; i < agents.size(); i++) {
-				agents[i]->computeNextDesiredPosition();
-				agents[i]->setX(agents[i]->getDesiredX());
-				agents[i]->setY(agents[i]->getDesiredY());
+				agents_array->computeNextDesiredPosition(i);
+				//agents[i]->computeNextDesiredPosition();
+				//agents[i]->setX(agents[i]->getDesiredX());
+				//agents[i]->setY(agents[i]->getDesiredY());
 			}
 			break;
 
@@ -69,9 +73,10 @@ void Ped::Model::tick()
 			omp_set_num_threads(this->num_threads);
 			#pragma omp parallel for schedule(static) 
 			for (int i = 0; i < agents.size(); i++) {
-				agents[i]->computeNextDesiredPosition();
-				agents[i]->setX(agents[i]->getDesiredX());
-				agents[i]->setY(agents[i]->getDesiredY());
+				agents_array->computeNextDesiredPosition(i);
+				//agents[i]->computeNextDesiredPosition();
+				//agents[i]->setX(agents[i]->getDesiredX());
+				//agents[i]->setY(agents[i]->getDesiredY());
 			}
 			break;
 			

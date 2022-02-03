@@ -16,6 +16,7 @@
 #include <set>
 
 #include "ped_agent.h"
+#include "ped_agents.h"
 
 namespace Ped{
 	class Tagent;
@@ -62,6 +63,8 @@ namespace Ped{
 
 		// The agents in this scenario
 		std::vector<Tagent*> agents;
+
+		Tagents* agents_array;
 
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;
