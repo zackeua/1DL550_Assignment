@@ -50,6 +50,12 @@ namespace Ped{
 
 	private:
 
+		// The threaded tick function as needed by for C++ Threads
+		static void threaded_tick(Ped::Model* model, int thread_id);
+
+		// The number of threads.
+		int num_threads;
+
 		// Denotes which implementation (sequential, parallel implementations..)
 		// should be used for calculating the desired positions of
 		// agents (Assignment 1)

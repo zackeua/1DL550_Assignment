@@ -17,6 +17,25 @@
 
 #include <stdlib.h>
 
+void Ped::Model::threaded_tick(Ped::Model* model, int thread_id) {
+	// Defining the block size, and the upper and lower points of the agents array, respectively.
+	int block_size = model->agents.size() / (model->num_threads);
+	int low = thread_id * block_size;
+	int high = low + block_size;
+
+	// Setting the end point of each batch
+	if (thread_id == model->num_threads - 1)
+		high = model->agents.size();
+
+	// Looping over each batch of the agents
+	for (int i = low; i < high; i++) {
+		model->agents_array->computeNextDesiredPosition(i);
+		model->agents[i]->computeNextDesiredPosition();
+		model->agents[i]->setX(model->agents[i]->getDesiredX());
+		model->agents[i]->setY(model->agents[i]->getDesiredY());
+	}
+}
+
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
 {
 	// Convenience test: does CUDA work on this machine?
@@ -37,7 +56,54 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 void Ped::Model::tick()
 {
-	// EDIT HERE FOR ASSIGNMENT 1
+	// Toggling which case to run
+	switch (this->implementation) {
+		case IMPLEMENTATION::SEQ: // The sequential version
+
+			// Looping over every element in the array.
+			for (int i = 0; i < agents.size(); i++) {
+				agents_array->computeNextDesiredPosition(i);
+				agents[i]->computeNextDesiredPosition();
+				agents[i]->setX(agents[i]->getDesiredX());
+				agents[i]->setY(agents[i]->getDesiredY());
+			}
+			break;
+
+		case IMPLEMENTATION::OMP: // The OpenMP version 
+			// Setting the number of threads
+			omp_set_num_threads(this->num_threads);
+
+			// Choosing the scheduling technique
+			#pragma omp parallel for schedule(static);
+
+			// Looping over the array according to OpenMP.
+			for (int i = 0; i < agents.size(); i++) {
+				agents_array->computeNextDesiredPosition(i);
+				agents[i]->computeNextDesiredPosition();
+				agents[i]->setX(agents[i]->getDesiredX());
+				agents[i]->setY(agents[i]->getDesiredY());
+			}
+			break;
+			
+		case IMPLEMENTATION::PTHREAD: // The C++ Threads version
+			
+			// Creating a pointer to the thread array.
+			thread* worker = new thread[this->num_threads];
+			
+			// Creating the threads and running them
+			for (int i = 0; i < this->num_threads; i++)
+				worker[i] = thread(threaded_tick, this, i);
+			
+			// Killing the threads
+			for (int i = 0; i < this->num_threads; i++)
+				worker[i].join();
+
+			// Freeing the thread array.
+			delete[] worker;
+
+			break;
+	}
+}
 }
 
 ////////////
