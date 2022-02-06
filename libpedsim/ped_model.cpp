@@ -28,20 +28,21 @@ void Ped::Model::threaded_tick(Ped::Model* model, int thread_id) {
 		high = model->agents.size();
 	
 	// Looping over each batch of the agents
-	for (int i = low; i < high; i++) {
-		model->agents[i]->computeNextDesiredPosition();
-		model->agents[i]->setX(model->agents[i]->getDesiredX());
-		model->agents[i]->setY(model->agents[i]->getDesiredY());
-	}
+	for (int i = low; i < high; i++)
+		model->agent_array->computeNextDesiredPosition(i);
+		
 }
 
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads)
 {
-	// Does CUDA work on this machine?
+	// Checking if  CUDA works on this machine
 	//cuda_test();
 
 	// Set the agents
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
+
+	// Initializing the array of agents
+	this->agent_array = new Tagents(agents);
 
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
@@ -58,14 +59,13 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 void Ped::Model::tick()
 {
+	
 	// Toggling which case to run
 	switch (this->implementation) {
 		case IMPLEMENTATION::SEQ: // The sequential version
-			for (int i = 0; i < agents.size(); i++) {
-				agents[i]->computeNextDesiredPosition();
-				agents[i]->setX(agents[i]->getDesiredX());
-				agents[i]->setY(agents[i]->getDesiredY());
-			}
+			for (int i = 0; i < agents.size(); i++)
+				agent_array->computeNextDesiredPosition(i);
+				
 			break;
 
 		case IMPLEMENTATION::OMP: // The OpenMP version 
@@ -76,11 +76,9 @@ void Ped::Model::tick()
 			#pragma omp parallel for schedule(static)
 
 			// Looping over the array according to OpenMP.
-			for (int i = 0; i < agents.size(); i++) {
-				agents[i]->computeNextDesiredPosition();
-				agents[i]->setX(agents[i]->getDesiredX());
-				agents[i]->setY(agents[i]->getDesiredY());
-			}
+			for (int i = 0; i < agents.size(); i++)
+				agent_array->computeNextDesiredPosition(i);
+
 			break;
 			
 		case IMPLEMENTATION::PTHREAD: // The C++ Threads version

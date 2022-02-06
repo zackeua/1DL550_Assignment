@@ -16,6 +16,7 @@
 #include <set>
 
 #include "ped_agent.h"
+#include "ped_agents.h"
 
 namespace Ped{
 	class Tagent;
@@ -28,7 +29,7 @@ namespace Ped{
 	{
 	public:
 
-		// Sets everything up
+		Sets everything up
 		void setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads);
 		
 		// Coordinates a time step in the scenario: move all agents by one step (if applicable).
@@ -63,6 +64,9 @@ namespace Ped{
 
 		// The agents in this scenario
 		std::vector<Tagent*> agents;
+
+		// The agents in this scenario
+		Tagents* agent_array;
 
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;

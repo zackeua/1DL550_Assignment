@@ -22,52 +22,52 @@ Ped::Tagent::Tagent(double posX, double posY) {
 void Ped::Tagent::init(int posX, int posY) {
 	x = posX;
 	y = posY;
-	destination = NULL;
-	lastDestination = NULL;
+	dest = NULL;
+	lastDest = NULL;
 }
 
 void Ped::Tagent::computeNextDesiredPosition() {
-	destination = getNextDestination();
-	if (destination == NULL) {
+	dest = getNextDestination();
+	if (dest == NULL) {
 		// no destination, no need to
 		// compute where to move to
 		return;
 	}
 
-	double diffX = destination->getx() - x;
-	double diffY = destination->gety() - y;
+	double diffX = dest->getx() - x;
+	double diffY = dest->gety() - y;
 	double len = sqrt(diffX * diffX + diffY * diffY);
 	desiredPositionX = (int)round(x + diffX / len);
 	desiredPositionY = (int)round(y + diffY / len);
 }
 
 void Ped::Tagent::addWaypoint(Twaypoint* wp) {
-	waypoints.push_back(wp);
+	waypts.push_back(wp);
 }
 
 Ped::Twaypoint* Ped::Tagent::getNextDestination() {
 	Ped::Twaypoint* nextDestination = NULL;
 	bool agentReachedDestination = false;
 
-	if (destination != NULL) {
+	if (dest != NULL) {
 		// compute if agent reached its current destination
-		double diffX = destination->getx() - x;
-		double diffY = destination->gety() - y;
+		double diffX = dest->getx() - x;
+		double diffY = dest->gety() - y;
 		double length = sqrt(diffX * diffX + diffY * diffY);
-		agentReachedDestination = length < destination->getr();
+		agentReachedDestination = length < dest->getr();
 	}
 
-	if ((agentReachedDestination || destination == NULL) && !waypoints.empty()) {
+	if ((agentReachedDestination || dest == NULL) && !waypts.empty()) {
 		// Case 1: agent has reached destination (or has no current destination);
 		// get next destination if available
-		waypoints.push_back(destination);
-		nextDestination = waypoints.front();
-		waypoints.pop_front();
+		waypts.push_back(dest);
+		nextDestination = waypts.front();
+		waypts.pop_front();
 	}
 	else {
 		// Case 2: agent has not yet reached destination, continue to move towards
 		// current destination
-		nextDestination = destination;
+		nextDestination = dest;
 	}
 
 	return nextDestination;
