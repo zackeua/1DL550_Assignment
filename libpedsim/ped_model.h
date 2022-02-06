@@ -29,7 +29,7 @@ namespace Ped{
 	public:
 
 		// Sets everything up
-		void setup(std::vector<Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario,IMPLEMENTATION implementation);
+		void setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads);
 		
 		// Coordinates a time step in the scenario: move all agents by one step (if applicable).
 		void tick();
@@ -53,9 +53,9 @@ namespace Ped{
 		// The threaded tick function as needed by for C++ Threads
 		static void threaded_tick(Ped::Model* model, int thread_id);
 
-		// The number of threads.
+		// The number of threads
 		int num_threads;
-
+	
 		// Denotes which implementation (sequential, parallel implementations..)
 		// should be used for calculating the desired positions of
 		// agents (Assignment 1)

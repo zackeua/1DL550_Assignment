@@ -26,22 +26,21 @@ void Ped::Model::threaded_tick(Ped::Model* model, int thread_id) {
 	// Setting the end point of each batch
 	if (thread_id == model->num_threads - 1)
 		high = model->agents.size();
-
+	
 	// Looping over each batch of the agents
 	for (int i = low; i < high; i++) {
-		model->agents_array->computeNextDesiredPosition(i);
 		model->agents[i]->computeNextDesiredPosition();
 		model->agents[i]->setX(model->agents[i]->getDesiredX());
 		model->agents[i]->setY(model->agents[i]->getDesiredY());
 	}
 }
 
-void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation)
+void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads)
 {
-	// Convenience test: does CUDA work on this machine?
-	cuda_test();
+	// Does CUDA work on this machine?
+	//cuda_test();
 
-	// Set 
+	// Set the agents
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
 
 	// Set up destinations
@@ -49,6 +48,9 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 	// Sets the chosen implemenation. Standard in the given code is SEQ
 	this->implementation = implementation;
+
+	// edit the number of threads here! 
+	this->num_threads = num_threads;
 
 	// Set up heatmap (relevant for Assignment 4)
 	setupHeatmapSeq();
@@ -59,10 +61,7 @@ void Ped::Model::tick()
 	// Toggling which case to run
 	switch (this->implementation) {
 		case IMPLEMENTATION::SEQ: // The sequential version
-
-			// Looping over every element in the array.
 			for (int i = 0; i < agents.size(); i++) {
-				agents_array->computeNextDesiredPosition(i);
 				agents[i]->computeNextDesiredPosition();
 				agents[i]->setX(agents[i]->getDesiredX());
 				agents[i]->setY(agents[i]->getDesiredY());
@@ -74,11 +73,10 @@ void Ped::Model::tick()
 			omp_set_num_threads(this->num_threads);
 
 			// Choosing the scheduling technique
-			#pragma omp parallel for schedule(static);
+			#pragma omp parallel for schedule(static)
 
 			// Looping over the array according to OpenMP.
 			for (int i = 0; i < agents.size(); i++) {
-				agents_array->computeNextDesiredPosition(i);
 				agents[i]->computeNextDesiredPosition();
 				agents[i]->setX(agents[i]->getDesiredX());
 				agents[i]->setY(agents[i]->getDesiredY());
@@ -86,7 +84,6 @@ void Ped::Model::tick()
 			break;
 			
 		case IMPLEMENTATION::PTHREAD: // The C++ Threads version
-			
 			// Creating a pointer to the thread array.
 			thread* worker = new thread[this->num_threads];
 			
@@ -103,7 +100,6 @@ void Ped::Model::tick()
 
 			break;
 	}
-}
 }
 
 ////////////
