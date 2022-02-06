@@ -22,10 +22,10 @@ MOCFILES=ParseScenario.moc PedSimulation.moc
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS) $(MOCFILES)
-	g++ $(CXXFLAGS) -o $(TARGET) $(OBJECTS) $(LIBS) $(LDFLAGS)
+	g++ $(CXXFLAGS) -g -o $(TARGET) $(OBJECTS) $(LIBS) $(LDFLAGS)
 
 %.o: %.cpp %.moc
-	g++ $(CXXFLAGS) $(INCPATH) -c -o $@ $<
+	g++ $(CXXFLAGS) $(INCPATH) -g -c -o $@ $<
 
 %.moc: %.h %.cpp
 	moc $(DEFINES) $(INCPATH) -i $< -o $@

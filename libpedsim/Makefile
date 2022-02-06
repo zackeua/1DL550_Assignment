@@ -9,10 +9,10 @@ CUDA_NVCC_FLAGS = --compiler-options -fPIC,-shared -Xcompiler -fopenmp
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS) $(CUDA_OBJECTS)
-	$(CXX) $(FLAGS) $(CXXFLAGS) $(DEBUGFLAGS) -o $(TARGET) $(OBJECTS) $(CUDA_OBJECTS)
+	$(CXX) $(FLAGS) -g $(CXXFLAGS) $(DEBUGFLAGS) -o $(TARGET) $(OBJECTS) $(CUDA_OBJECTS)
 
 %.co: %.cu
-	nvcc $(CUDA_NVCC_FLAGS) $(DEBUGFLAGS) -c -o $@ $<
+	nvcc $(CUDA_NVCC_FLAGS) $(DEBUGFLAGS) -g -c -o $@ $<
 
 
 clean:
