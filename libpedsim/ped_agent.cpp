@@ -10,6 +10,7 @@
 #include <math.h>
 
 #include <stdlib.h>
+#include <iostream>
 
 Ped::Tagent::Tagent(int posX, int posY) {
 	Ped::Tagent::init(posX, posY);
@@ -55,6 +56,8 @@ Ped::Twaypoint* Ped::Tagent::getNextDestination() {
 		double diffY = destination->gety() - y;
 		double length = sqrt(diffX * diffX + diffY * diffY);
 		agentReachedDestination = length < destination->getr();
+		std::cout << " " << x << std::endl;
+		std::cout << " " << y << std::endl;
 	}
 
 	if ((agentReachedDestination || destination == NULL) && !waypoints.empty()) {

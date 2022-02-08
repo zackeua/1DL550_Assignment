@@ -40,10 +40,10 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Set 
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
 
-	this->agents_array = new Tagents(agents);
-
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
+
+	this->agents_array = new Tagents(agents);
 
 	// Sets the chosen implemenation. Standard in the given code is SEQ
 	this->implementation = implementation;
@@ -60,12 +60,14 @@ void Ped::Model::tick()
 	// EDIT HERE FOR ASSIGNMENT 1
 	switch (this->implementation) {
 		case IMPLEMENTATION::SEQ:
+			int pleb;
 			for (int i = 0; i < agents.size(); i++) {
 				agents_array->computeNextDesiredPosition(i);
 				//agents[i]->computeNextDesiredPosition();
 				//agents[i]->setX(agents[i]->getDesiredX());
 				//agents[i]->setY(agents[i]->getDesiredY());
 			}
+			std::cin >> pleb; // kommentera bort när vi inte debuggar
 			break;
 
 		case IMPLEMENTATION::OMP:

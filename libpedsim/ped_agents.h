@@ -41,6 +41,14 @@ namespace Ped {
 		int* x;
 		int* y;
 
+
+		// The agent's destination
+		int* dest_x;
+		int* dest_y;
+		int* dest_r;
+
+
+
 		// The agent's desired next position
 		int* desiredPositionX;
 		int* desiredPositionY;
@@ -52,7 +60,7 @@ namespace Ped {
 		Twaypoint** lastDestination;
 
 		// The queue of all destinations that this agent still has to visit
-		deque<Twaypoint*>* waypoints;
+		deque<Twaypoint*>** waypoints;
 
         Ped::Twaypoint* getNextDestination(int i);
 	};
