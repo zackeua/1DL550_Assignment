@@ -46,12 +46,10 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
 
 	if (implementation == IMPLEMENTATION::VECTOR) {
-		while (agents.size()%4 != 0)
-		{
+		while (agents.size() % 4 != 0) {
 			agents.push_back(agents[0]);
 			destinations.push_back(destinations[0]);
 		}
-		
 	}
 
 	// Initializing the array of agents
@@ -105,8 +103,7 @@ void Ped::Model::tick()
 			}
 			break;
 		
-		case IMPLEMENTATION::VECTOR: // The vectorized version 
-		std::cout << agents.size() << std::endl;
+		case IMPLEMENTATION::VECTOR: // The vectorized version
 			for (int i = 0; i < agents.size(); i += 4) {
 				this->agents_array->destination[i] = this->agents_array->getNextDestination(i);
 				this->agents_array->destination[i+1] = this->agents_array->getNextDestination(i+1);
