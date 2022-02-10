@@ -104,20 +104,150 @@ void Ped::Model::tick()
 			break;
 		
 		case IMPLEMENTATION::VECTOR: // The vectorized version
-			for (int i = 0; i < agents.size(); i += 4) {
-				this->agents_array->destination[i] = this->agents_array->getNextDestination(i);
-				this->agents_array->destination[i+1] = this->agents_array->getNextDestination(i+1);
-				this->agents_array->destination[i+2] = this->agents_array->getNextDestination(i+2);
-				this->agents_array->destination[i+3] = this->agents_array->getNextDestination(i+3);
 
+			for (int i = 0; i < agents.size(); i += 4) {
+
+				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+				Ped::Twaypoint* nextDestination0 = NULL;
+				Ped::Twaypoint* nextDestination1 = NULL;
+				Ped::Twaypoint* nextDestination2 = NULL;
+				Ped::Twaypoint* nextDestination3 = NULL;
+				bool agentReachedDestination0 = false;
+				bool agentReachedDestination1 = false;
+				bool agentReachedDestination2 = false;
+				bool agentReachedDestination3 = false;
+
+				if (this->agents_array->destination[i] != NULL) {
+					// Compute if agent reached its current destination
+					double diffX0 = this->agents_array->dest_x[i] - this->agents_array->x[i];
+					double diffY0 = this->agents_array->dest_y[i] - this->agents_array->y[i];
+					double length0 = sqrt(diffX0 * diffX0 + diffY0 * diffY0);
+					agentReachedDestination0 = length0 < this->agents_array->dest_r[i];
+				}
+				if (this->agents_array->destination[i+1] != NULL) {
+					// Compute if agent reached its current destination
+					double diffX1 = this->agents_array->dest_x[i+1] - this->agents_array->x[i+1];
+					double diffY1 = this->agents_array->dest_y[i+1] - this->agents_array->y[i+1];
+					double length1 = sqrt(diffX1 * diffX1 + diffY1 * diffY1);
+					agentReachedDestination1 = length1 < this->agents_array->dest_r[i+1];
+				}
+				if (this->agents_array->destination[i+2] != NULL) {
+					// Compute if agent reached its current destination
+					double diffX2 = this->agents_array->dest_x[i+2] - this->agents_array->x[i+2];
+					double diffY2 = this->agents_array->dest_y[i+2] - this->agents_array->y[i+2];
+					double length2 = sqrt(diffX2 * diffX2 + diffY2 * diffY2);
+					agentReachedDestination2 = length2 < this->agents_array->dest_r[i+2];
+				}
+				if (this->agents_array->destination[i+3] != NULL) {
+					// Compute if agent reached its current destination
+					double diffX3 = this->agents_array->dest_x[i+3] - this->agents_array->x[i+3];
+					double diffY3 = this->agents_array->dest_y[i+3] - this->agents_array->y[i+3];
+					double length3 = sqrt(diffX3 * diffX3 + diffY3 * diffY3);
+					agentReachedDestination3 = length3 < this->agents_array->dest_r[i+3];
+				}
+
+				//////////////////////////////////////////////////////
+
+				if ((agentReachedDestination0 || this->agents_array->destination[i] == NULL) && !this->agents_array->waypoints[i]->empty()) {
+					// Case 1: Agent has reached destination (or has no current destination);
+					// get next destination if available
+					if (this->agents_array->destination[i] != NULL) {
+						this->agents_array->waypoints[i]->push_back(this->agents_array->destination[i]);
+					}
+					nextDestination0 = this->agents_array->waypoints[i]->front();
+					this->agents_array->dest_x[i] = nextDestination0->getx();
+					this->agents_array->dest_y[i] = nextDestination0->gety();
+					this->agents_array->dest_r[i] = nextDestination0->getr();
+
+					
+				// double diffX0 = this->agents_array->dest_x[i] - this->agents_array->x[i];
+				// double diffY0 = this->agents_array->dest_y[i] - this->agents_array->y[i];
+
+					this->agents_array->waypoints[i]->pop_front();
+					// Do not print this->destination here since it might be NULL
+				} //////////////////////////////////////////////////////
+				else {
+					// Case 2: Agent has not yet reached destination, continue to move towards
+					// current destination
+					nextDestination0 = this->agents_array->destination[i];
+				}
+
+				if ((agentReachedDestination1 || this->agents_array->destination[i+1] == NULL) && !this->agents_array->waypoints[i+1]->empty()) {
+					// Case 1: Agent has reached destination (or has no current destination);
+					// get next destination if available
+					if (this->agents_array->destination[i+1] != NULL) {
+						this->agents_array->waypoints[i+1]->push_back(this->agents_array->destination[i+1]);
+					}
+					nextDestination1 = this->agents_array->waypoints[i+1]->front();
+					this->agents_array->dest_x[i+1] = nextDestination1->getx();
+					this->agents_array->dest_y[i+1] = nextDestination1->gety();
+					this->agents_array->dest_r[i+1] = nextDestination1->getr();
+
+					this->agents_array->waypoints[i+1]->pop_front();
+					// Do not print this->destination here since it might be NULL
+				} //////////////////////////////////////////////////////
+				else {
+					// Case 2: Agent has not yet reached destination, continue to move towards
+					// current destination
+					nextDestination1 = this->agents_array->destination[i+1];
+				}
+
+				if ((agentReachedDestination2 || this->agents_array->destination[i+2] == NULL) && !this->agents_array->waypoints[i+2]->empty()) {
+					// Case 1: Agent has reached destination (or has no current destination);
+					// get next destination if available
+					if (this->agents_array->destination[i+2] != NULL) {
+						this->agents_array->waypoints[i+2]->push_back(this->agents_array->destination[i+2]);
+					}
+					nextDestination2 = this->agents_array->waypoints[i+2]->front();
+					this->agents_array->dest_x[i+2] = nextDestination2->getx();
+					this->agents_array->dest_y[i+2] = nextDestination2->gety();
+					this->agents_array->dest_r[i+2] = nextDestination2->getr();
+
+					this->agents_array->waypoints[i+2]->pop_front();
+					// Do not print this->destination here since it might be NULL
+				} //////////////////////////////////////////////////////
+				else {
+					// Case 2: Agent has not yet reached destination, continue to move towards
+					// current destination
+					nextDestination2 = this->agents_array->destination[i+2];
+				}
+
+				if ((agentReachedDestination3 || this->agents_array->destination[i+3] == NULL) && !this->agents_array->waypoints[i+3]->empty()) {
+					// Case 1: Agent has reached destination (or has no current destination);
+					// get next destination if available
+					if (this->agents_array->destination[i+3] != NULL) {
+						this->agents_array->waypoints[i+3]->push_back(this->agents_array->destination[i+3]);
+					}
+					nextDestination3 = this->agents_array->waypoints[i+3]->front();
+					this->agents_array->dest_x[i+3] = nextDestination3->getx();
+					this->agents_array->dest_y[i+3] = nextDestination3->gety();
+					this->agents_array->dest_r[i+3] = nextDestination3->getr();
+
+					this->agents_array->waypoints[i+3]->pop_front();
+					// Do not print this->destination here since it might be NULL
+				} //////////////////////////////////////////////////////
+				else {
+					// Case 2: Agent has not yet reached destination, continue to move towards
+					// current destination
+					nextDestination3 = this->agents_array->destination[i+3];
+				}
+
+				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+				// Gettnig the agent destinations
+				this->agents_array->destination[i] = nextDestination0;
+				this->agents_array->destination[i+1] = nextDestination1;
+				this->agents_array->destination[i+2] = nextDestination2;
+				this->agents_array->destination[i+3] = nextDestination3;
+
+				// If it is null, then we abort that update
 				if (this->agents_array->destination[i] == NULL) {return;}
 				if (this->agents_array->destination[i+1] == NULL) {return;}
 				if (this->agents_array->destination[i+2] == NULL) {return;}
 				if (this->agents_array->destination[i+3] == NULL) {return;}
 
-				__m128 diffX = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_load_ps(this->agents_array->x + i));
-				__m128 diffY = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_y + i), _mm_load_ps(this->agents_array->y + i));
-				
+				// The SISD version of the below
 				/*
 				double diffX0 = this->agents_array->dest_x[i] - this->agents_array->x[i];
 				double diffY0 = this->agents_array->dest_y[i] - this->agents_array->y[i];
@@ -132,12 +262,11 @@ void Ped::Model::tick()
 				double diffY3 = this->agents_array->dest_y[i+3] - this->agents_array->y[i+3];
 				*/
 
-				__m128 sqrt_arg = _mm_add_ps(_mm_mul_ps(diffX, diffX), _mm_mul_ps(diffY, diffY));
+				// Computing the difference in each coordinate
+				__m128 diffX = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_load_ps(this->agents_array->x + i));
+				__m128 diffY = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_y + i), _mm_load_ps(this->agents_array->y + i));
 				
-				__m128 len = _mm_mul_ps(sqrt_arg, _mm_rsqrt_ps(sqrt_arg));
-				//sqrt_arg * 1/sqrt(sqrt_arg) <- faster
-				//__m128 len = _mm_sqrt_ps(sqrt_arg);
-
+				// The SISD version of the below
 				/*
 				double len0 = sqrt(diffX0 * diffX0 + diffY0 * diffY0);
 				double len1 = sqrt(diffX1 * diffX1 + diffY1 * diffY1);
@@ -145,12 +274,13 @@ void Ped::Model::tick()
 				double len3 = sqrt(diffX3 * diffX3 + diffY3 * diffY3);
 				*/
 
-				__m128 newX = _mm_add_ps(_mm_load_ps(this->agents_array->x + i), _mm_div_ps(diffX, len));
-				__m128 newY = _mm_add_ps(_mm_load_ps(this->agents_array->y + i), _mm_div_ps(diffY, len));
+				// Compute the length using the square root
+				__m128 sqrt_arg = _mm_add_ps(_mm_mul_ps(diffX, diffX), _mm_mul_ps(diffY, diffY));
+				__m128 len = _mm_mul_ps(sqrt_arg, _mm_rsqrt_ps(sqrt_arg));
+				//sqrt_arg * 1/sqrt(sqrt_arg) <- faster
+				//__m128 len = _mm_sqrt_ps(sqrt_arg);
 
-				_mm_store_ps(this->agents_array->x + i, _mm_round_ps (newX, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC)));
-				_mm_store_ps(this->agents_array->y + i, _mm_round_ps (newY, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC)));
-
+				// The SISD version of the below
 				/*
 				this->agents_array->x[i] = (int)round(this->agents_array->x[i] + diffX0 / len0);
 				this->agents_array->y[i] = round(this->agents_array->y[i] + diffY0 / len0);
@@ -165,6 +295,15 @@ void Ped::Model::tick()
 				this->agents_array->y[i+3] = round(this->agents_array->y[i+3] + diffY3 / len3);
 				*/
 
+				// Store the results
+				__m128 newX = _mm_add_ps(_mm_load_ps(this->agents_array->x + i), _mm_div_ps(diffX, len));
+				__m128 newY = _mm_add_ps(_mm_load_ps(this->agents_array->y + i), _mm_div_ps(diffY, len));
+
+				// Round off the results
+				_mm_store_ps(this->agents_array->x + i, _mm_round_ps(newX, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC)));
+				_mm_store_ps(this->agents_array->y + i, _mm_round_ps(newY, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC)));
+
+				// Comment this in order to not get overhead for updating the graphics (Can't vectorize this because of the function call)
 				this->agents[i]->setX((int)round(this->agents_array->x[i]));
 				this->agents[i]->setY((int)round(this->agents_array->y[i]));
 				
