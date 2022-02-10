@@ -56,8 +56,8 @@ Ped::Twaypoint* Ped::Tagent::getNextDestination() {
 		double diffY = destination->gety() - y;
 		double length = sqrt(diffX * diffX + diffY * diffY);
 		agentReachedDestination = length < destination->getr();
-		std::cout << " " << x << std::endl;
-		std::cout << " " << y << std::endl;
+		//std::cout << " " << x << std::endl;
+		//std::cout << " " << y << std::endl;
 	}
 
 	if ((agentReachedDestination || destination == NULL) && !waypoints.empty()) {

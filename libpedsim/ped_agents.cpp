@@ -16,11 +16,13 @@
 Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
 	//static float *restrict mat_a __attribute__((aligned (XMM_ALIGNMENT_BYTES)));
 
-    this->x = new int[agents.size()];
-    this->y = new int[agents.size()];
-	this->dest_x = new int[agents.size()];
-    this->dest_y = new int[agents.size()];
-	this->dest_r = new int[agents.size()];
+	this->agents = agents;
+
+    this->x = new float[agents.size()];
+    this->y = new float[agents.size()];
+	this->dest_x = new float[agents.size()];
+    this->dest_y = new float[agents.size()];
+	this->dest_r = new float[agents.size()];
 
     this->destination = new Twaypoint*[agents.size()];
     this->lastDestination = new Twaypoint*[agents.size()];
@@ -28,8 +30,8 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
 
 	
 	for (int i = 0; i < agents.size(); i++) {
-        this->x[i] = agents[i]->getX();
-        this->y[i] = agents[i]->getY();
+        this->x[i] = (float)agents[i]->getX();
+        this->y[i] = (float)agents[i]->getY();
 		
 		this->destination[i] = agents[i]->destination;
 		this->waypoints[i] = &(agents[i]->waypoints);
@@ -59,8 +61,11 @@ void Ped::Tagents::computeNextDesiredPosition(int i) {
 	double len = sqrt(diffX * diffX + diffY * diffY);
 	
 	// SIMD:
-	this->x[i] = (int)round(this->x[i] + diffX / len);
-	this->y[i] = (int)round(this->y[i] + diffY / len);
+	this->x[i] = round(this->x[i] + diffX / len);
+	this->y[i] = round(this->y[i] + diffY / len);
+
+	this->agents[i]->setX((int)x[i]);
+	this->agents[i]->setY((int)y[i]);
 }
 /*
 void Ped::Tagents::addWaypoint(Twaypoint* wp, int i) {
@@ -79,8 +84,8 @@ Ped::Twaypoint* Ped::Tagents::getNextDestination(int i) {
 		double diffY = dest_y[i] - this->y[i];
 		double length = sqrt(diffX * diffX + diffY * diffY);
 		agentReachedDestination = length < this->dest_r[i];
-		std::cout << " " << this->x[i] << std::endl;
-		std::cout << " " << this->y[i] << std::endl;
+		//std::cout << " " << this->x[i] << std::endl;
+		//std::cout << " " << this->y[i] << std::endl;
 		//std::cout << length << " " << this->destination[i]->getr() << std::endl;
 	}
 

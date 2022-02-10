@@ -77,6 +77,11 @@ int main(int argc, char*argv[]) {
 					implementation_to_test = Ped::PTHREAD;
 					std::cout << "Implementation: PTHREAD" << std::endl;
 				}
+				else if (strcmp(argv[i], "VECTOR") == 0)
+				{
+					implementation_to_test = Ped::VECTOR;
+					std::cout << "Implementation: VECTOR" << std::endl;
+				}
 				else {
 					implementation_to_test = Ped::SEQ;
 					std::cout << "Fallback implementation: SEQ" << std::endl;

@@ -15,6 +15,11 @@
 #include <omp.h>
 #include <thread>
 
+#include <math.h>
+
+#include <xmmintrin.h>
+#include <smmintrin.h>
+
 #include <stdlib.h>
 
 void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
@@ -37,11 +42,21 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Convenience test: does CUDA work on this machine?
 	//cuda_test();
 
-	// Set 
+	// Set
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
 
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
+
+	if (implementation == IMPLEMENTATION::VECTOR) {
+		while (agents.size()%4 != 0)
+		{
+			agents.push_back(agents[0]);
+			destinations.push_back(destinations[0]);
+		}
+		
+	}
+
 
 	this->agents_array = new Tagents(agents);
 
@@ -60,14 +75,14 @@ void Ped::Model::tick()
 	// EDIT HERE FOR ASSIGNMENT 1
 	switch (this->implementation) {
 		case IMPLEMENTATION::SEQ:
-			int pleb;
+			//int pleb;
 			for (int i = 0; i < agents.size(); i++) {
 				agents_array->computeNextDesiredPosition(i);
 				//agents[i]->computeNextDesiredPosition();
 				//agents[i]->setX(agents[i]->getDesiredX());
 				//agents[i]->setY(agents[i]->getDesiredY());
 			}
-			std::cin >> pleb; // kommentera bort när vi inte debuggar
+			//std::cin >> pleb; // kommentera bort när vi inte debuggar
 			break;
 
 		case IMPLEMENTATION::OMP:
@@ -83,7 +98,7 @@ void Ped::Model::tick()
 			break;
 			
 		case IMPLEMENTATION::PTHREAD:
-			
+			{
 			thread* worker = new thread[this->num_threads];
 			
 			for (int i = 0; i < this->num_threads; i++) {
@@ -95,7 +110,89 @@ void Ped::Model::tick()
 			}
 
 			delete[] worker;
+			}
+			break;
+		
+		case IMPLEMENTATION::VECTOR:
+		std::cout << agents.size() << std::endl;
+			for (int i = 0; i < agents.size(); i += 4) {
+				this->agents_array->destination[i] = this->agents_array->getNextDestination(i);
+				this->agents_array->destination[i+1] = this->agents_array->getNextDestination(i+1);
+				this->agents_array->destination[i+2] = this->agents_array->getNextDestination(i+2);
+				this->agents_array->destination[i+3] = this->agents_array->getNextDestination(i+3);
 
+				if (this->agents_array->destination[i] == NULL) {return;}
+				if (this->agents_array->destination[i+1] == NULL) {return;}
+				if (this->agents_array->destination[i+2] == NULL) {return;}
+				if (this->agents_array->destination[i+3] == NULL) {return;}
+
+
+
+				// SIMD: recleare diffX and diffY as simd
+				
+
+				__m128 diffX = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_load_ps(this->agents_array->x + i));
+				__m128 diffY = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_y + i), _mm_load_ps(this->agents_array->y + i));
+				/*
+				double diffX0 = this->agents_array->dest_x[i] - this->agents_array->x[i];
+				double diffY0 = this->agents_array->dest_y[i] - this->agents_array->y[i];
+
+				double diffX1 = this->agents_array->dest_x[i+1] - this->agents_array->x[i+1];
+				double diffY1 = this->agents_array->dest_y[i+1] - this->agents_array->y[i+1];
+
+				double diffX2 = this->agents_array->dest_x[i+2] - this->agents_array->x[i+2];
+				double diffY2 = this->agents_array->dest_y[i+2] - this->agents_array->y[i+2];
+
+				double diffX3 = this->agents_array->dest_x[i+3] - this->agents_array->x[i+3];
+				double diffY3 = this->agents_array->dest_y[i+3] - this->agents_array->y[i+3];
+				*/
+				__m128 sqrt_arg = _mm_add_ps(_mm_mul_ps(diffX, diffX), _mm_mul_ps(diffY, diffY));
+				
+				__m128 len = _mm_mul_ps(sqrt_arg, _mm_rsqrt_ps(sqrt_arg));
+				//sqrt_arg * 1/sqrt(sqrt_arg) <- faster
+				//__m128 len = _mm_sqrt_ps(sqrt_arg);
+
+
+				/*
+				double len0 = sqrt(diffX0 * diffX0 + diffY0 * diffY0);
+				double len1 = sqrt(diffX1 * diffX1 + diffY1 * diffY1);
+				double len2 = sqrt(diffX2 * diffX2 + diffY2 * diffY2);
+				double len3 = sqrt(diffX3 * diffX3 + diffY3 * diffY3);
+				*/
+
+				__m128 newX = _mm_add_ps(_mm_load_ps(this->agents_array->x + i), _mm_div_ps(diffX, len));
+				__m128 newY = _mm_add_ps(_mm_load_ps(this->agents_array->y + i), _mm_div_ps(diffY, len));
+
+				_mm_store_ps(this->agents_array->x + i, _mm_round_ps (newX, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC)));
+				_mm_store_ps(this->agents_array->y + i, _mm_round_ps (newY, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC)));
+
+				/*
+				this->agents_array->x[i] = (int)round(this->agents_array->x[i] + diffX0 / len0);
+				this->agents_array->y[i] = round(this->agents_array->y[i] + diffY0 / len0);
+
+				this->agents_array->x[i+1] = round(this->agents_array->x[i+1] + diffX1 / len1);
+				this->agents_array->y[i+1] = round(this->agents_array->y[i+1] + diffY1 / len1);
+
+				this->agents_array->x[i+2] = round(this->agents_array->x[i+2] + diffX2 / len2);
+				this->agents_array->y[i+2] = round(this->agents_array->y[i+2] + diffY2 / len2);
+
+				this->agents_array->x[i+3] = round(this->agents_array->x[i+3] + diffX3 / len3);
+				this->agents_array->y[i+3] = round(this->agents_array->y[i+3] + diffY3 / len3);
+				*/
+
+				// set new position in agent
+				this->agents[i]->setX((int)round(this->agents_array->x[i]));
+				this->agents[i]->setY((int)round(this->agents_array->y[i]));
+				
+				this->agents[i+1]->setX((int)round(this->agents_array->x[i+1]));
+				this->agents[i+1]->setY((int)round(this->agents_array->y[i+1]));
+
+				this->agents[i+2]->setX((int)round(this->agents_array->x[i+2]));
+				this->agents[i+2]->setY((int)round(this->agents_array->y[i+2]));
+				
+				this->agents[i+3]->setX((int)round(this->agents_array->x[i+3]));
+				this->agents[i+3]->setY((int)round(this->agents_array->y[i+3]));
+			}
 			break;
 	}
 }
