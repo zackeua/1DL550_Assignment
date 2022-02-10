@@ -14,20 +14,22 @@
 #include <iostream>
 
 Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
-    this->x = new int[agents.size()];
-    this->y = new int[agents.size()];
+	this->agents = agents;
 
-	this->dest_x = new int[agents.size()];
-    this->dest_y = new int[agents.size()];
-	this->dest_r = new int[agents.size()];
+    this->x = new float[agents.size()];
+    this->y = new float[agents.size()];
+
+	this->dest_x = new float[agents.size()];
+    this->dest_y = new float[agents.size()];
+	this->dest_r = new float[agents.size()];
 
     this->destination = new Twaypoint*[agents.size()];
     this->lastDestination = new Twaypoint*[agents.size()];
     this->waypoints = new deque<Twaypoint*>*[agents.size()];
 	
 	for (int i = 0; i < agents.size(); i++) {
-        this->x[i] = agents[i]->getX();
-        this->y[i] = agents[i]->getY();
+        this->x[i] = (float)agents[i]->getX();
+        this->y[i] = (float)agents[i]->getY();
 		
 		this->destination[i] = agents[i]->destination;
 		this->waypoints[i] = &(agents[i]->waypoints);
@@ -43,17 +45,17 @@ void Ped::Tagents::computeNextDesiredPosition(int i) {
 		// compute where to move to
 		return;
 	}
-	// this->destination is safe to print below
-
-	// SIMD
+	// Safe to print here
 	double diffX = dest_x[i] - this->x[i];
 	double diffY = dest_y[i] - this->y[i];
 
 	double len = sqrt(diffX * diffX + diffY * diffY);
 	
-	// SIMD
-	this->x[i] = (int)round(this->x[i] + diffX / len);
-	this->y[i] = (int)round(this->y[i] + diffY / len);
+	this->x[i] = round(this->x[i] + diffX / len);
+	this->y[i] = round(this->y[i] + diffY / len);
+
+	this->agents[i]->setX((int)x[i]);
+	this->agents[i]->setY((int)y[i]);
 }
 
 Ped::Twaypoint* Ped::Tagents::getNextDestination(int i) {
@@ -80,7 +82,7 @@ Ped::Twaypoint* Ped::Tagents::getNextDestination(int i) {
 		this->dest_r[i] = nextDestination->getr();
 
 		this->waypoints[i]->pop_front();
-		// Do not print this->destination here, since it might be NULL
+		// Do not print this->destination here since it might be NULL
 	}
 	else {
 		// Case 2: Agent has not yet reached destination, continue to move towards

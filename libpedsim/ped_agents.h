@@ -28,27 +28,25 @@ namespace Ped {
 	class Tagents {
 	public:
 		Tagents(std::vector<Ped::Tagent*> agents);
-		
 
         void computeNextDesiredPosition(int i);
         
         void addWaypoint(deque<Twaypoint*>* wp, int i);
 
-	private:
-		Tagents() {};
+		std::vector<Ped::Tagent*> agents;
 
 		// The agent's current position
-		int* x;
-		int* y;
+		float* x;
+		float* y;
 
 		// The agent's destination
-		int* dest_x;
-		int* dest_y;
-		int* dest_r;
+		float* dest_x;
+		float* dest_y;
+		float* dest_r;
 
 		// The agent's desired next position
-		int* desiredPositionX;
-		int* desiredPositionY;
+		float* desiredPositionX;
+		float* desiredPositionY;
 
 		// The current destination (may require several steps to reach)
 		Twaypoint** destination;
@@ -59,7 +57,15 @@ namespace Ped {
 		// The queue of all destinations that this agent still has to visit
 		deque<Twaypoint*>** waypoints;
 
-        Ped::Twaypoint* getNextDestination(int i);
+		Ped::Twaypoint* getNextDestination(int i);
+	private:
+		Tagents() {};
+
+		
+
+	
+
+        
 	};
 }
 

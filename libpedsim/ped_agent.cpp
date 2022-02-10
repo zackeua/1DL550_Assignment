@@ -51,7 +51,7 @@ Ped::Twaypoint* Ped::Tagent::getNextDestination() {
 	bool agentReachedDestination = false;
 
 	if (destination != NULL) {
-		// Compute if agent reached its current destination
+		// compute if agent reached its current destination
 		double diffX = destination->getx() - x;
 		double diffY = destination->gety() - y;
 		double length = sqrt(diffX * diffX + diffY * diffY);

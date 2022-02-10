@@ -33,7 +33,6 @@ int main(int argc, char*argv[]) {
 	bool timing_mode = 0;
 	int num_threads = 1;
 	int i = 1;
-	
 	// Change this variable when testing different versions of your code. 
 	// May need modification or extension in later assignments depending on your implementations
 	Ped::IMPLEMENTATION implementation_to_test = Ped::SEQ;
@@ -77,6 +76,11 @@ int main(int argc, char*argv[]) {
 				{
 					implementation_to_test = Ped::PTHREAD;
 					std::cout << "Implementation: PTHREAD" << std::endl;
+				}
+				else if (strcmp(argv[i], "VECTOR") == 0)
+				{
+					implementation_to_test = Ped::VECTOR;
+					std::cout << "Implementation: VECTOR" << std::endl;
 				}
 				else {
 					implementation_to_test = Ped::SEQ;
