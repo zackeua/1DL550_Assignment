@@ -107,8 +107,23 @@ void Ped::Model::tick()
 
 			for (int i = 0; i < agents.size(); i += 4) {
 
+				//? Reference: https://cs.stackexchange.com/questions/86154/if-and-while-statements-within-a-simd-architecture-and-its-memory-architectu
+				/*
+				 * TODO: SIMD
+				 * 1. Check if you can vectorize TODO-1 and TODO-4
+				 * 2. Check if you can vectorize TODO-5
+				 * 3. Check if you can remove the if statements for TODO-2 and TODO-3
+				 */
+				/*
+				 * TODO: Friday
+				 * 1. Finish implementing and testing SIMD
+				 * 2. Finish implementing and testing CUDA
+				 * 3. Write the report and submit it
+				 */
+
 				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+				// TODO 1: Can't vectorize these lines since they aren't vectors
 				Ped::Twaypoint* nextDestination0 = NULL;
 				Ped::Twaypoint* nextDestination1 = NULL;
 				Ped::Twaypoint* nextDestination2 = NULL;
@@ -118,6 +133,7 @@ void Ped::Model::tick()
 				bool agentReachedDestination2 = false;
 				bool agentReachedDestination3 = false;
 
+				// TODO 2: Can't vectorize these lines because they are if statements
 				if (this->agents_array->destination[i] != NULL) {
 					// Compute if agent reached its current destination
 					double diffX0 = this->agents_array->dest_x[i] - this->agents_array->x[i];
@@ -149,6 +165,7 @@ void Ped::Model::tick()
 
 				//////////////////////////////////////////////////////
 
+				// TODO 3: Can't vectorize these lines because they are if statements
 				if ((agentReachedDestination0 || this->agents_array->destination[i] == NULL) && !this->agents_array->waypoints[i]->empty()) {
 					// Case 1: Agent has reached destination (or has no current destination);
 					// get next destination if available
@@ -235,7 +252,8 @@ void Ped::Model::tick()
 
 				////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-				// Gettnig the agent destinations
+				// TODO 4: Can't vectorize these lines since they aren't vectors
+				// Setting the agent destinations
 				this->agents_array->destination[i] = nextDestination0;
 				this->agents_array->destination[i+1] = nextDestination1;
 				this->agents_array->destination[i+2] = nextDestination2;
@@ -303,6 +321,7 @@ void Ped::Model::tick()
 				_mm_store_ps(this->agents_array->x + i, _mm_round_ps(newX, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC)));
 				_mm_store_ps(this->agents_array->y + i, _mm_round_ps(newY, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC)));
 
+				// TODO 5: Can't vectorize these lines since they aren't vectors
 				// Comment this in order to not get overhead for updating the graphics (Can't vectorize this because of the function call)
 				this->agents[i]->setX((int)round(this->agents_array->x[i]));
 				this->agents[i]->setY((int)round(this->agents_array->y[i]));
