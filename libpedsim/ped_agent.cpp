@@ -10,6 +10,7 @@
 #include <math.h>
 
 #include <stdlib.h>
+#include <iostream>
 
 Ped::Tagent::Tagent(int posX, int posY) {
 	Ped::Tagent::init(posX, posY);
@@ -22,52 +23,52 @@ Ped::Tagent::Tagent(double posX, double posY) {
 void Ped::Tagent::init(int posX, int posY) {
 	x = posX;
 	y = posY;
-	dest = NULL;
-	lastDest = NULL;
+	destination = NULL;
+	lastDestination = NULL;
 }
 
 void Ped::Tagent::computeNextDesiredPosition() {
-	dest = getNextDestination();
-	if (dest == NULL) {
+	destination = getNextDestination();
+	if (destination == NULL) {
 		// no destination, no need to
 		// compute where to move to
 		return;
 	}
 
-	double diffX = dest->getx() - x;
-	double diffY = dest->gety() - y;
+	double diffX = destination->getx() - x;
+	double diffY = destination->gety() - y;
 	double len = sqrt(diffX * diffX + diffY * diffY);
 	desiredPositionX = (int)round(x + diffX / len);
 	desiredPositionY = (int)round(y + diffY / len);
 }
 
 void Ped::Tagent::addWaypoint(Twaypoint* wp) {
-	waypts.push_back(wp);
+	waypoints.push_back(wp);
 }
 
 Ped::Twaypoint* Ped::Tagent::getNextDestination() {
 	Ped::Twaypoint* nextDestination = NULL;
 	bool agentReachedDestination = false;
 
-	if (dest != NULL) {
-		// compute if agent reached its current destination
-		double diffX = dest->getx() - x;
-		double diffY = dest->gety() - y;
+	if (destination != NULL) {
+		// Compute if agent reached its current destination
+		double diffX = destination->getx() - x;
+		double diffY = destination->gety() - y;
 		double length = sqrt(diffX * diffX + diffY * diffY);
-		agentReachedDestination = length < dest->getr();
+		agentReachedDestination = length < destination->getr();
 	}
 
-	if ((agentReachedDestination || dest == NULL) && !waypts.empty()) {
-		// Case 1: agent has reached destination (or has no current destination);
+	if ((agentReachedDestination || destination == NULL) && !waypoints.empty()) {
+		// Case 1: Agent has reached destination (or has no current destination);
 		// get next destination if available
-		waypts.push_back(dest);
-		nextDestination = waypts.front();
-		waypts.pop_front();
+		waypoints.push_back(destination);
+		nextDestination = waypoints.front();
+		waypoints.pop_front();
 	}
 	else {
-		// Case 2: agent has not yet reached destination, continue to move towards
+		// Case 2: Agent has not yet reached destination, continue to move towards
 		// current destination
-		nextDestination = dest;
+		nextDestination = destination;
 	}
 
 	return nextDestination;

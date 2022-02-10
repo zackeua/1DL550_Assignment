@@ -1,0 +1,45 @@
+Vi har från början en array of structs (agents[]). Vi vill skriva om det till en struct of arrays (en vektor enligt Zackeus Zetterberg) enligt föreläsning 3 på slide 41 (se markeringar). Kolla på ped_agent.h under x och y.
+
+Plan:
+
+Gör en vektor av x och y koordinater
+
+x = vektor(n);
+y = vektor(n);
+
+Vi vill göra om getNextDestination så att den ändrar en plats i x-vektorn och en plats i y-vektorn, vilket motsvarar att ändra platsen på precis en agent.
+
+1. Setup av vår struct of arrays. Den ska innehålla vektorerna  x, y, och size, som innehåller just x-koordinaterna, y-koordinaterna, och size. 
+2. Modifiera funktionerna så att de passar den structen.
+
+struct data {
+	int size = sizeof(agents);
+	vector current_x_pos(size);
+	vector current_y_pos(size);
+	vector dest_x_pos(size);
+	vector dest_y_pos(size);
+}
+
+Resterande förändringar är att ändra följande funktioner:
+
+Vektorisera detta med hjälp av SIMD för att få det snabbare, (och parallellisera sedan den operationen :-( ).
+1. getX, getY, setX, och setY ersätts av att vi ändrar direkt i våra koordinat-arrayer enligt e.g: data->current_x_pos[index]
+2. Twaypoint* destination ersätts av dest_x_pos och dest_y_pos. Dessa sätts av destinationInScenario. Sätt dessa genom att loopa över dem istället.
+3. Kopiera in koden från computeNextDesiredPosition() in i ped_model.cpp.
+4. Radera init, eller modifiera den bruttalt.
+
+Word size är 32 bit, en int är 8 bit i SIMD. Då ryms 4 int i en word.
+
+Mätningar att göra.
+1. Assignment 1: serial
+2. Assignment 2: serial
+3. Assignment 2: OpenMP
+4. Assignment 2: C++ threads
+5. Assignment 2: SIMD
+6. Assignment 2: CUDA
+
+Antal trådar som ska användas är det som var optimum för assignment 1.
+
+Det är värt att ha i åtanke att vissa SIMD-operationer är dyrare än andra, och hur stor varje int behöver kunna bli (eftersom att det senare styr hur många int vi kan lagra i en instruktion med hjälp av SIMD). Vi måste kolla upp saker såsom att sqrt(diffX^2+diffY^2) kan bli en double (från rad 56 i ped_agent.cpp).
+
+Håll koll på agentReachedDestination = length < destination->getr();

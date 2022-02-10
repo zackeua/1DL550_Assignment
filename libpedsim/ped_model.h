@@ -51,8 +51,8 @@ namespace Ped{
 
 	private:
 
-		// The threaded tick function as needed by for C++ Threads
-		static void threaded_tick(Ped::Model* model, int thread_id);
+		// Thread tick function, moves Tagent between id low and high
+		static void thread_tick(Ped::Model* model, int thread_id);
 
 		// The number of threads
 		int num_threads;
@@ -65,8 +65,8 @@ namespace Ped{
 		// The agents in this scenario
 		std::vector<Tagent*> agents;
 
-		// The agents in this scenario
-		Tagents* agent_array;
+		// The array of agents in this scenario
+		Tagents* agents_array;
 
 		// The waypoints in this scenario
 		std::vector<Twaypoint*> destinations;

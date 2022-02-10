@@ -17,40 +17,36 @@
 
 #include <stdlib.h>
 
-void Ped::Model::threaded_tick(Ped::Model* model, int thread_id) {
-	// Defining the block size, and the upper and lower points of the agents array, respectively.
+void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
 	int block_size = model->agents.size() / (model->num_threads);
 	int low = thread_id * block_size;
 	int high = low + block_size;
 
-	// Setting the end point of each batch
-	if (thread_id == model->num_threads - 1)
+	if (thread_id == model->num_threads-1)
 		high = model->agents.size();
-	
-	// Looping over each batch of the agents
+
 	for (int i = low; i < high; i++)
-		model->agent_array->computeNextDesiredPosition(i);
-		
+		model->agents_array->computeNextDesiredPosition(i);
 }
 
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads)
 {
-	// Checking if  CUDA works on this machine
+	// Convenience test: does CUDA work on this machine?
 	//cuda_test();
 
 	// Set the agents
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
 
-	// Initializing the array of agents
-	this->agent_array = new Tagents(agents);
-
 	// Set up destinations
 	destinations = std::vector<Ped::Twaypoint*>(destinationsInScenario.begin(), destinationsInScenario.end());
+
+	// Initializing the array of agents
+	this->agents_array = new Tagents(agents);
 
 	// Sets the chosen implemenation. Standard in the given code is SEQ
 	this->implementation = implementation;
 
-	// edit the number of threads here! 
+	// Set the number of threads
 	this->num_threads = num_threads;
 
 	// Set up heatmap (relevant for Assignment 4)
@@ -59,13 +55,11 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 void Ped::Model::tick()
 {
-	
 	// Toggling which case to run
 	switch (this->implementation) {
 		case IMPLEMENTATION::SEQ: // The sequential version
 			for (int i = 0; i < agents.size(); i++)
-				agent_array->computeNextDesiredPosition(i);
-				
+				agents_array->computeNextDesiredPosition(i);
 			break;
 
 		case IMPLEMENTATION::OMP: // The OpenMP version 
@@ -77,8 +71,7 @@ void Ped::Model::tick()
 
 			// Looping over the array according to OpenMP.
 			for (int i = 0; i < agents.size(); i++)
-				agent_array->computeNextDesiredPosition(i);
-
+				agents_array->computeNextDesiredPosition(i);
 			break;
 			
 		case IMPLEMENTATION::PTHREAD: // The C++ Threads version
@@ -87,8 +80,8 @@ void Ped::Model::tick()
 			
 			// Creating the threads and running them
 			for (int i = 0; i < this->num_threads; i++)
-				worker[i] = thread(threaded_tick, this, i);
-			
+				worker[i] = thread(thread_tick, this, i);
+
 			// Killing the threads
 			for (int i = 0; i < this->num_threads; i++)
 				worker[i].join();
