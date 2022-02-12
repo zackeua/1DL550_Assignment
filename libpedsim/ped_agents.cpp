@@ -18,16 +18,23 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
 
 	this->agents = agents;
 
-    this->x = new float[agents.size()];
-    this->y = new float[agents.size()];
-	this->dest_x = new float[agents.size()];
-    this->dest_y = new float[agents.size()];
-	this->dest_r = new float[agents.size()];
+    this->x = new float[agents.size()]; __attribute__((aligned(32)))
+    this->y = new float[agents.size()]; __attribute__((aligned(32)))
+	this->dest_x = new float[agents.size()]; __attribute__((aligned(32)))
+    this->dest_y = new float[agents.size()]; __attribute__((aligned(32)))
+	this->dest_r = new float[agents.size()]; __attribute__((aligned(32)))
 
     this->destination = new Twaypoint*[agents.size()];
     this->lastDestination = new Twaypoint*[agents.size()];
     this->waypoints = new deque<Twaypoint*>*[agents.size()];
 
+	
+	this->waypoint_x = new float*[agents.size()];
+	this->waypoint_y = new float*[agents.size()];
+	this->waypoint_r = new float*[agents.size()];
+
+	this->waypoint_ptr = new int[agents.size()];
+	this->waypoint_len = new int[agents.size()];
 	
 	for (int i = 0; i < agents.size(); i++) {
         this->x[i] = (float)agents[i]->getX();
@@ -36,6 +43,21 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
 		this->destination[i] = agents[i]->destination;
 		this->waypoints[i] = &(agents[i]->waypoints);
 		this->lastDestination[i] = agents[i]->lastDestination;
+		
+
+		
+		this->waypoint_x[i] = new float[this->waypoints[i]->size()];
+		this->waypoint_y[i] = new float[this->waypoints[i]->size()];
+		this->waypoint_r[i] = new float[this->waypoints[i]->size()];
+		this->waypoint_ptr[i] = 0;
+		this->waypoint_len[i] = this->waypoints[i]->size();
+
+		for (int j = 0; j < this->waypoints[i]->size(); j++) {
+			this->waypoint_x[i][j] = this->waypoints[i]->at(j)->getx();
+			this->waypoint_y[i][j] = this->waypoints[i]->at(j)->gety();
+			this->waypoint_r[i][j] = this->waypoints[i]->at(j)->getr();
+		}
+		
     }
 }
 
@@ -61,11 +83,11 @@ void Ped::Tagents::computeNextDesiredPosition(int i) {
 	double len = sqrt(diffX * diffX + diffY * diffY);
 	
 	// SIMD:
-	this->x[i] = round(this->x[i] + diffX / len);
-	this->y[i] = round(this->y[i] + diffY / len);
+	this->x[i] = (int)round(this->x[i] + diffX / len);
+	this->y[i] = (int)round(this->y[i] + diffY / len);
 
-	this->agents[i]->setX((int)x[i]);
-	this->agents[i]->setY((int)y[i]);
+	this->agents[i]->setX(x[i]);
+	this->agents[i]->setY(y[i]);
 }
 /*
 void Ped::Tagents::addWaypoint(Twaypoint* wp, int i) {
@@ -92,6 +114,8 @@ Ped::Twaypoint* Ped::Tagents::getNextDestination(int i) {
 	if ((agentReachedDestination || this->destination[i] == NULL) && !this->waypoints[i]->empty()) {
 		// Case 1: agent has reached destination (or has no current destination);
 		// get next destination if available
+		
+		
 		if (this->destination[i] != NULL) {
 			this->waypoints[i]->push_back(this->destination[i]);
 		}
@@ -99,6 +123,15 @@ Ped::Twaypoint* Ped::Tagents::getNextDestination(int i) {
 		this->dest_x[i] = nextDestination->getx();
 		this->dest_y[i] = nextDestination->gety();
 		this->dest_r[i] = nextDestination->getr();
+		/*
+		this->dest_x[i] = this->waypoint_x[i][this->waypoint_ptr[i]];
+		this->dest_y[i] = this->waypoint_y[i][this->waypoint_ptr[i]];
+		this->dest_r[i] = this->waypoint_r[i][this->waypoint_ptr[i]];
+
+		this->waypoint_ptr[i] += 1;
+		if (this->waypoint_ptr[i] == this->waypoint_len[i])
+			this->waypoint_ptr[i] = 0;
+		*/
 
 		this->waypoints[i]->pop_front();
 		// DO NOT print destination here, might be NULL

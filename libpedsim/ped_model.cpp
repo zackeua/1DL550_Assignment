@@ -20,6 +20,9 @@
 #include <xmmintrin.h>
 #include <smmintrin.h>
 
+#include <immintrin.h>
+
+
 #include <stdlib.h>
 
 void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
@@ -36,6 +39,7 @@ void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
 		//model->agents[i]->setY(model->agents[i]->getDesiredY());
 	}
 }
+
 
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads)
 {
@@ -114,13 +118,13 @@ void Ped::Model::tick()
 			break;
 		
 		case IMPLEMENTATION::VECTOR:
-		std::cout << agents.size() << std::endl;
+			{
 			for (int i = 0; i < agents.size(); i += 4) {
 				this->agents_array->destination[i] = this->agents_array->getNextDestination(i);
 				this->agents_array->destination[i+1] = this->agents_array->getNextDestination(i+1);
 				this->agents_array->destination[i+2] = this->agents_array->getNextDestination(i+2);
 				this->agents_array->destination[i+3] = this->agents_array->getNextDestination(i+3);
-
+				
 				if (this->agents_array->destination[i] == NULL) {return;}
 				if (this->agents_array->destination[i+1] == NULL) {return;}
 				if (this->agents_array->destination[i+2] == NULL) {return;}
@@ -181,6 +185,7 @@ void Ped::Model::tick()
 				*/
 
 				// set new position in agent
+				///*
 				this->agents[i]->setX((int)round(this->agents_array->x[i]));
 				this->agents[i]->setY((int)round(this->agents_array->y[i]));
 				
@@ -192,6 +197,15 @@ void Ped::Model::tick()
 				
 				this->agents[i+3]->setX((int)round(this->agents_array->x[i+3]));
 				this->agents[i+3]->setY((int)round(this->agents_array->y[i+3]));
+				//*/
+			}
+			}
+			break;
+
+			case IMPLEMENTATION::CUDA:
+			{
+				//cuda_tick(this->agents_array);
+
 			}
 			break;
 	}
@@ -274,6 +288,6 @@ void Ped::Model::cleanup() {
 
 Ped::Model::~Model()
 {
-	std::for_each(agents.begin(), agents.end(), [](Ped::Tagent *agent){delete agent;});
-	std::for_each(destinations.begin(), destinations.end(), [](Ped::Twaypoint *destination){delete destination; });
+	//std::for_each(agents.begin(), agents.end(), [](Ped::Tagent *agent){delete agent;});
+	//std::for_each(destinations.begin(), destinations.end(), [](Ped::Twaypoint *destination){delete destination; });
 }
