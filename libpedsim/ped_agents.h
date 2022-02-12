@@ -45,7 +45,7 @@ namespace Ped {
 		float* dest_x;
 		float* dest_y;
 		float* dest_r;
-		bool agentReachedDestination;
+		bool* agentReachedDestination;
 		
 		float** waypoint_x;
 		float** waypoint_y;

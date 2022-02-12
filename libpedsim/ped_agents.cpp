@@ -18,16 +18,16 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
 
 	this->agents = agents;
 
-    this->x = new float[agents.size()]; __attribute__((aligned(32)))
-    this->y = new float[agents.size()]; __attribute__((aligned(32)))
-	this->dest_x = new float[agents.size()]; __attribute__((aligned(32)))
-    this->dest_y = new float[agents.size()]; __attribute__((aligned(32)))
-	this->dest_r = new float[agents.size()]; __attribute__((aligned(32)))
+    this->x = new float[agents.size()];// __attribute__((aligned(32)))
+    this->y = new float[agents.size()];// __attribute__((aligned(32)))
+	this->dest_x = new float[agents.size()];// __attribute__((aligned(32)))
+    this->dest_y = new float[agents.size()];// __attribute__((aligned(32)))
+	this->dest_r = new float[agents.size()];// __attribute__((aligned(32)))
 
     this->destination = new Twaypoint*[agents.size()];
     this->lastDestination = new Twaypoint*[agents.size()];
     this->waypoints = new deque<Twaypoint*>*[agents.size()];
-	this->agentReachedDestination = false;
+	this->agentReachedDestination = new bool[agents.size()];
 
 	this->waypoint_x = new float*[agents.size()];
 	this->waypoint_y = new float*[agents.size()];
@@ -43,6 +43,7 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
 		this->destination[i] = agents[i]->destination;
 		this->waypoints[i] = &(agents[i]->waypoints);
 		this->lastDestination[i] = agents[i]->lastDestination;
+		this->agentReachedDestination[i] = false;
 
 		this->waypoint_x[i] = new float[this->waypoints[i]->size()];
 		this->waypoint_y[i] = new float[this->waypoints[i]->size()];
@@ -92,11 +93,11 @@ void Ped::Tagents::updateDestination(int i) {
 		double diffX = dest_x[i] - this->x[i];
 		double diffY = dest_y[i] - this->y[i];
 		double length = sqrt(diffX * diffX + diffY * diffY);
-		this->agentReachedDestination = length < this->dest_r[i];
+		this->agentReachedDestination[i] = length < this->dest_r[i];
 	}
 
 	// If the destination is null, or if the agent has reached its destination, then we compute its new destination coordinates.
-	if (this->destination[i] == NULL || this->agentReachedDestination) {
+	if (this->destination[i] == NULL || this->agentReachedDestination[i]) {
 		this->dest_x[i] = this->waypoint_x[i][this->waypoint_ptr[i]];
 		this->dest_y[i] = this->waypoint_y[i][this->waypoint_ptr[i]];
 		this->dest_r[i] = this->waypoint_r[i][this->waypoint_ptr[i]];
