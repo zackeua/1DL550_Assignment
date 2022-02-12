@@ -121,10 +121,10 @@ void Ped::Model::tick()
 			{
 			for (int i = 0; i < agents.size(); i += 4) {
 				// Updating this->agents_array->agentReachedDestination
-				this->agents_array->updateNextDestination(i);
-				this->agents_array->updateNextDestination(i+1);
-				this->agents_array->updateNextDestination(i+2);
-				this->agents_array->updateNextDestination(i+3);
+				this->agents_array->updateDestination(i);
+				this->agents_array->updateDestination(i+1);
+				this->agents_array->updateDestination(i+2);
+				this->agents_array->updateDestination(i+3);
 
 				// Computing the next destination based on where the agent is
 				this->agents_array->destination[i] = this->agents_array->agentReachedDestination || this->agents_array->destination[i] == NULL ? \
@@ -136,13 +136,11 @@ void Ped::Model::tick()
 				this->agents_array->destination[i+3] = this->agents_array->agentReachedDestination || this->agents_array->destination[i+3] == NULL ? \
 													   this->agents_array->waypoints[i+3]->front() : this->agents_array->destination[i+3];
 
+				// If the next destination is null, then we abort the update
 				if (this->agents_array->destination[i] == NULL) {return;}
 				if (this->agents_array->destination[i+1] == NULL) {return;}
 				if (this->agents_array->destination[i+2] == NULL) {return;}
 				if (this->agents_array->destination[i+3] == NULL) {return;}
-
-				// SIMD: recleare diffX and diffY as simd
-				
 
 				__m128 diffX = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_load_ps(this->agents_array->x + i));
 				__m128 diffY = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_y + i), _mm_load_ps(this->agents_array->y + i));

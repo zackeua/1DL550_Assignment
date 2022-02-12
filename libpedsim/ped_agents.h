@@ -68,7 +68,7 @@ namespace Ped {
 		// The queue of all destinations that this agent still has to visit
 		deque<Twaypoint*>** waypoints;
 
-		void updateNextDestination(int i);
+		void updateDestination(int i);
 	private:
 		Tagents() {};
 

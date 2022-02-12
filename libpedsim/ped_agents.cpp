@@ -59,7 +59,7 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
 }
 
 void Ped::Tagents::computeNextDesiredPosition(int i) {
-	updateNextDestination(i);
+	updateDestination(i);
 	this->destination[i] = this->agentReachedDestination || this->destination[i] == NULL ?\
 						   this->waypoints[i]->front() : this->destination[i];
 	
@@ -69,19 +69,12 @@ void Ped::Tagents::computeNextDesiredPosition(int i) {
 		return;
 	}
 	// Safe to print here
-	//std::cout << this->destination[i]->getx() << std::endl;	
-	//std::cout << this->destination[i]->gety() << std::endl;
 
-	//double diffX = destination[i]->getx() - this->x[i];
-	//double diffY = destination[i]->gety() - this->y[i];
-
-	// SIMD: recleare diffX and diffY as simd
 	double diffX = dest_x[i] - this->x[i];
 	double diffY = dest_y[i] - this->y[i];
 
 	double len = sqrt(diffX * diffX + diffY * diffY);
 	
-	// SIMD:
 	this->x[i] = (int)round(this->x[i] + diffX / len);
 	this->y[i] = (int)round(this->y[i] + diffY / len);
 
@@ -89,14 +82,17 @@ void Ped::Tagents::computeNextDesiredPosition(int i) {
 	this->agents[i]->setY(y[i]);
 }
 
-void Ped::Tagents::updateNextDestination(int i) {
+void Ped::Tagents::updateDestination(int i) {
+	// This might help when vectorizing:
+	// https://stackoverflow.com/questions/38006616/how-to-use-if-condition-in-intrinsics
+	// https://community.intel.com/t5/Intel-C-Compiler/use-of-if-else-statement-in-sse2-intrinsics/td-p/816362
+
 	// If the destination isn't null, then compute if the agent reached its destination and add it to the end of the deque.
 	if (this->destination[i] != NULL) {
 		double diffX = dest_x[i] - this->x[i];
 		double diffY = dest_y[i] - this->y[i];
 		double length = sqrt(diffX * diffX + diffY * diffY);
 		this->agentReachedDestination = length < this->dest_r[i];
-		this->waypoints[i]->push_back(this->destination[i]);
 	}
 
 	// If the destination is null, or if the agent has reached its destination, then we compute its new destination coordinates.
