@@ -131,56 +131,56 @@ void Ped::Model::tick()
 
 				// A started attempt of vectorizing the first if statement in updateDestination()
 
-				// Load the initial reach data
-				initial_data = _mm_set1_ps(*(this->agents_array->agentReachedDestination + i) == true);
+				// // Load the initial reach data
+				// initial_data = _mm_set1_ps(*(this->agents_array->agentReachedDestination + i) == true);
 
-				// Check for which agents the conditional statement is true
-				conditional_statement = _mm_set1_ps(this->agents_array->destination + i != NULL);
-				zeros = _mm_set1_ps(0.0);
-				boolean_values = _mm_cmplt_ps(zeros, conditional_statement);
+				// // Check for which agents the conditional statement is true
+				// conditional_statement = _mm_set1_ps(this->agents_array->destination + i != NULL);
+				// zeros = _mm_set1_ps(0.0);
+				// boolean_values = _mm_cmplt_ps(zeros, conditional_statement);
 
-				// Compute the lengths to the destinations
-				diffX = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_load_ps(this->agents_array->x + i));
-				diffY = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_y + i), _mm_load_ps(this->agents_array->y + i));
-				sqrt_arg = _mm_add_ps(_mm_mul_ps(diffX, diffX), _mm_mul_ps(diffY, diffY));
-				len = _mm_mul_ps(sqrt_arg, _mm_rsqrt_ps(sqrt_arg));
+				// // Compute the lengths to the destinations
+				// diffX = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_load_ps(this->agents_array->x + i));
+				// diffY = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_y + i), _mm_load_ps(this->agents_array->y + i));
+				// sqrt_arg = _mm_add_ps(_mm_mul_ps(diffX, diffX), _mm_mul_ps(diffY, diffY));
+				// len = _mm_mul_ps(sqrt_arg, _mm_rsqrt_ps(sqrt_arg));
 
-				// Updating the reached vector
-				all_updated = _mm_sub_ps(len, _mm_load_ps(this->agents_array->dest_r + i));
+				// // Updating the reached vector
+				// all_updated = _mm_sub_ps(len, _mm_load_ps(this->agents_array->dest_r + i));
 
-				// Blending the results (How do I connect this with agentReachedDestination?)
-				actually_reached = _mm_blendv_ps(all_updated, initial_data, boolean_values);
+				// // Blending the results (How do I connect this with agentReachedDestination?)
+				// actually_reached = _mm_blendv_ps(all_updated, initial_data, boolean_values);
 
-				// Here, we have to store back the results
+				// // Here, we have to store back the results
 
-				// We only miss the comparison here. When we have figured it out, then we might be able to handle the second if statement.
-				conditional_statement = _mm_set1_ps(this->agents_array->destination + i == NULL || this->agents_array->agentReachedDestination[i]);
-				zeros = _mm_set1_ps(0.0);
-				boolean_values = _mm_cmplt_ps(zeros, conditional_statement);
+				// // We only miss the comparison here. When we have figured it out, then we might be able to handle the second if statement.
+				// conditional_statement = _mm_set1_ps(this->agents_array->destination + i == NULL || this->agents_array->agentReachedDestination[i]);
+				// zeros = _mm_set1_ps(0.0);
+				// boolean_values = _mm_cmplt_ps(zeros, conditional_statement);
 
-				// Update the x and y coordinate of the destintion, and its radius.
-				destX = _mm_store_ps((this->agents_array->waypoint_x + i)[this->agents_array->waypoint_ptr + i]);
-				destY = _mm_store_ps((this->agents_array->waypoint_y + i)[this->agents_array->waypoint_ptr + i]);
-				destR = _mm_store_ps((this->agents_array->waypoint_r + i)[this->agents_array->waypoint_ptr + i]);
+				// // Update the x and y coordinate of the destintion, and its radius.
+				// destX = _mm_store_ps((this->agents_array->waypoint_x + i)[this->agents_array->waypoint_ptr + i]);
+				// destY = _mm_store_ps((this->agents_array->waypoint_y + i)[this->agents_array->waypoint_ptr + i]);
+				// destR = _mm_store_ps((this->agents_array->waypoint_r + i)[this->agents_array->waypoint_ptr + i]);
 
-				// Here, we have to store back the values
+				// // Here, we have to store back the values
 
-				// We can't vectorize this since we are updating the vector in the struct
-				if (this->agents_array->destination[i] == NULL || this->agents_array->agentReachedDestination[i]) {
-					this->agents_array->waypoint_ptr[i] += 1;
-					if (this->agents_array->waypoint_ptr[i] == this->agents_array->waypoint_len[i]) this->agents_array->waypoint_ptr[i] = 0;
-				} if (this->agents_array->destination[i+1] == NULL || this->agents_array->agentReachedDestination[i+1]) {
-					this->agents_array->waypoint_ptr[i+1] += 1;
-					if (this->agents_array->waypoint_ptr[i+1] == this->agents_array->waypoint_len[i+1]) this->agents_array->waypoint_ptr[i+1] = 0;
-				} if (this->agents_array->destination[i+2] == NULL || this->agents_array->agentReachedDestination[i+2]) {
-					this->agents_array->waypoint_ptr[i+2] += 1;
-					if (this->agents_array->waypoint_ptr[i+2] == this->agents_array->waypoint_len[i+2]) this->agents_array->waypoint_ptr[i+2] = 0;
-				} if (this->agents_array->destination[i+3] == NULL || this->agents_array->agentReachedDestination[i+3]) {
-					this->agents_array->waypoint_ptr[i+3] += 1;
-					if (this->agents_array->waypoint_ptr[i+3] == this->agents_array->waypoint_len[i+3]) this->agents_array->waypoint_ptr[i+3] = 0;
-				}
+				// // We can't vectorize this since we are updating the vector in the struct
+				// if (this->agents_array->destination[i] == NULL || this->agents_array->agentReachedDestination[i]) {
+				// 	this->agents_array->waypoint_ptr[i] += 1;
+				// 	if (this->agents_array->waypoint_ptr[i] == this->agents_array->waypoint_len[i]) this->agents_array->waypoint_ptr[i] = 0;
+				// } if (this->agents_array->destination[i+1] == NULL || this->agents_array->agentReachedDestination[i+1]) {
+				// 	this->agents_array->waypoint_ptr[i+1] += 1;
+				// 	if (this->agents_array->waypoint_ptr[i+1] == this->agents_array->waypoint_len[i+1]) this->agents_array->waypoint_ptr[i+1] = 0;
+				// } if (this->agents_array->destination[i+2] == NULL || this->agents_array->agentReachedDestination[i+2]) {
+				// 	this->agents_array->waypoint_ptr[i+2] += 1;
+				// 	if (this->agents_array->waypoint_ptr[i+2] == this->agents_array->waypoint_len[i+2]) this->agents_array->waypoint_ptr[i+2] = 0;
+				// } if (this->agents_array->destination[i+3] == NULL || this->agents_array->agentReachedDestination[i+3]) {
+				// 	this->agents_array->waypoint_ptr[i+3] += 1;
+				// 	if (this->agents_array->waypoint_ptr[i+3] == this->agents_array->waypoint_len[i+3]) this->agents_array->waypoint_ptr[i+3] = 0;
+				// }
 
-				// Computing the next destination based on where the agent is
+				// // Computing the next destination based on where the agent is
 				this->agents_array->destination[i] = this->agents_array->agentReachedDestination[i] || this->agents_array->destination[i] == NULL ? \
 													 this->agents_array->waypoints[i]->front() : this->agents_array->destination[i];
 				this->agents_array->destination[i+1] = this->agents_array->agentReachedDestination[i+1] || this->agents_array->destination[i+1] == NULL ? \

@@ -24,81 +24,43 @@ void hello()
 	print_func <<<2, 10>>> ();
 }
 
-/*
 __global__ void cuda_func(int n, Ped::Tagents* agents_array) {
 	int index = threadIdx.x;
 	int stride = blockDim.x;
 
 	for (int i = index; i < n; i += stride) {
-		//agents_array->computeNextDesiredPosition(i);
-
-		Ped::Twaypoint* nextDestination = NULL;
 		bool agentReachedDestination = false;
 
 		if (agents_array->destination[i] != NULL) {
-			// compute if agent reached its current destination
-			
-
 			double diffX = agents_array->dest_x[i] - agents_array->x[i];
 			double diffY = agents_array->dest_y[i] - agents_array->y[i];
 			double length = sqrt(diffX * diffX + diffY * diffY);
 			agentReachedDestination = length < agents_array->dest_r[i];
-			//std::cout << " " << this->x[i] << std::endl;
-			//std::cout << " " << this->y[i] << std::endl;
-			//std::cout << length << " " << this->destination[i]->getr() << std::endl;
 		}
 
-		if ((agentReachedDestination || agents_array->destination[i] == NULL) && !agents_array->waypoints[i]->empty()) {
-			// Case 1: agent has reached destination (or has no current destination);
-			// get next destination if available
-			if (agents_array->destination[i] != NULL) {
-				agents_array->waypoints[i]->push_back(agents_array->destination[i]);
-			}
-			nextDestination = agents_array->waypoints[i]->front();
-			agents_array->dest_x[i] = nextDestination->x;
-			agents_array->dest_y[i] = nextDestination->y;
-			agents_array->dest_r[i] = nextDestination->r;
-
-			agents_array->waypoints[i]->pop_front();
-			// DO NOT print destination here, might be NULL
-		}
-		else {
-			// Case 2: agent has not yet reached destination, continue to move towards
-			// current destination
-			nextDestination = agents_array->destination[i];
+		if (agentReachedDestination || agents_array->destination[i] == NULL) {
+			agents_array->dest_x[i] = agents_array->waypoint_x[i][agents_array->waypoint_ptr[i]];
+			agents_array->dest_y[i] = agents_array->waypoint_y[i][agents_array->waypoint_ptr[i]];
+			agents_array->dest_r[i] = agents_array->waypoint_r[i][agents_array->waypoint_ptr[i]];
+			
+			agents_array->waypoint_ptr[i] += 1;
+			if (agents_array->waypoint_ptr[i] == agents_array->waypoint_len[i])
+				agents_array->waypoint_ptr[i] = 0;
 		}
 
-		agents_array->destination[i] = nextDestination;
+		agents_array->destination[i] = agents_array->agentReachedDestination[i] || agents_array->destination[i] == NULL ? \
+						  			   agents_array->waypoints[i]->front() : agents_array->destination[i];
 
-
-		if (agents_array->destination[i] == NULL) {
-			// no destination, no need to
-			// compute where to move to
-			return;
-		}
+		if (agents_array->destination[i] == NULL) { return; }
+		
 		// Safe to print here
-		//std::cout << this->destination[i]->getx() << std::endl;	
-		//std::cout << this->destination[i]->gety() << std::endl;
-
-		//double diffX = destination[i]->getx() - this->x[i];
-		//double diffY = destination[i]->gety() - this->y[i];
-
-		// SIMD: recleare diffX and diffY as simd
 		double diffX = agents_array->dest_x[i] - agents_array->x[i];
 		double diffY = agents_array->dest_y[i] - agents_array->y[i];
-
 		double len = sqrt(diffX * diffX + diffY * diffY);
-		
-		// SIMD:
 		agents_array->x[i] = (int)round(agents_array->x[i] + diffX / len);
 		agents_array->y[i] = (int)round(agents_array->y[i] + diffY / len);
-
-		//agents_array->agents[i]->setX(agents_array->x[i]);
-		//agents_array->agents[i]->setY(agents_array->y[i]);
-
 	}
 }
-
 
 int cuda_tick(Ped::Tagents* agents) {
 	Ped::Tagents* cuda_agents;
@@ -115,13 +77,10 @@ int cuda_tick(Ped::Tagents* agents) {
 	cuda_func <<<number_of_blocks, threads_per_block>>> (cuda_agents->agents.size(), cuda_agents);
 
 	cudaStatus = cudaDeviceSynchronize();
-
 	cudaFree(cuda_agents);
 
 	return 0;
-
 }
-*/
 
 int cuda_test()
 {
