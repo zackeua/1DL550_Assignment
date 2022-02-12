@@ -84,59 +84,29 @@ void Ped::Tagents::computeNextDesiredPosition(int i) {
 	this->agents[i]->setX(x[i]);
 	this->agents[i]->setY(y[i]);
 }
-/*
-void Ped::Tagents::addWaypoint(Twaypoint* wp, int i) {
-	this->waypoints[i].push_back(wp);
-}
-*/
+
 Ped::Twaypoint* Ped::Tagents::getNextDestination(int i) {
-	Ped::Twaypoint* nextDestination = NULL;
 	bool agentReachedDestination = false;
 
+	// If the destination isn't null, then compute if the agent reached its destination and add it to the end of the deque.
 	if (this->destination[i] != NULL) {
-		// compute if agent reached its current destination
-		
-
 		double diffX = dest_x[i] - this->x[i];
 		double diffY = dest_y[i] - this->y[i];
 		double length = sqrt(diffX * diffX + diffY * diffY);
 		agentReachedDestination = length < this->dest_r[i];
-		//std::cout << " " << this->x[i] << std::endl;
-		//std::cout << " " << this->y[i] << std::endl;
-		//std::cout << length << " " << this->destination[i]->getr() << std::endl;
+		this->waypoints[i]->push_back(this->destination[i]);
 	}
 
-	if ((agentReachedDestination || this->destination[i] == NULL) && !this->waypoints[i]->empty()) {
-		// Case 1: agent has reached destination (or has no current destination);
-		// get next destination if available
-		
-		
-		if (this->destination[i] != NULL) {
-			this->waypoints[i]->push_back(this->destination[i]);
-		}
-		nextDestination = this->waypoints[i]->front();
-		// this->dest_x[i] = nextDestination->getx();
-		// this->dest_y[i] = nextDestination->gety();
-		// this->dest_r[i] = nextDestination->getr();
-		// /*
+	// If the destination is null, or if the agent has reached its destination, then we compute its new destination coordinates.
+	if (this->destination[i] == NULL || agentReachedDestination) {
 		this->dest_x[i] = this->waypoint_x[i][this->waypoint_ptr[i]];
 		this->dest_y[i] = this->waypoint_y[i][this->waypoint_ptr[i]];
 		this->dest_r[i] = this->waypoint_r[i][this->waypoint_ptr[i]];
-		// std::cout << " " << this->dest_x[i] << std::endl;
 
 		this->waypoint_ptr[i] += 1;
 		if (this->waypoint_ptr[i] == this->waypoint_len[i])
 			this->waypoint_ptr[i] = 0;
-		// */
-
-		this->waypoints[i]->pop_front();
-		// DO NOT print destination here, might be NULL
-	}
-	else {
-		// Case 2: agent has not yet reached destination, continue to move towards
-		// current destination
-		nextDestination = this->destination[i];
 	}
 
-	return nextDestination;
+	return agentReachedDestination || this->destination[i] == NULL ? this->waypoints[i]->front() : this->destination[i];
 }
