@@ -68,6 +68,8 @@ namespace Ped {
 		int desiredPositionX;
 		int desiredPositionY;
 
+		
+
 		// Internal init function 
 		void init(int posX, int posY);
 

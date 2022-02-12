@@ -28,6 +28,7 @@ namespace Ped {
 	class Tagents {
 	public:
 		Tagents(std::vector<Ped::Tagent*> agents);
+		
 
         void computeNextDesiredPosition(int i);
         
@@ -39,16 +40,26 @@ namespace Ped {
 		float* x;
 		float* y;
 
+
 		// The agent's destination
 		float* dest_x;
 		float* dest_y;
 		float* dest_r;
 
+		
+		float** waypoint_x;
+		float** waypoint_y;
+		float** waypoint_r;
+		int* waypoint_ptr;
+		int* waypoint_len;
+		
+
+
 		// The agent's desired next position
 		float* desiredPositionX;
 		float* desiredPositionY;
 
-		// The current destination (may require several steps to reach)
+			// The current destination (may require several steps to reach)
 		Twaypoint** destination;
 
 		// The last destination

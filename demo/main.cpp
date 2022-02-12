@@ -82,6 +82,11 @@ int main(int argc, char*argv[]) {
 					implementation_to_test = Ped::VECTOR;
 					std::cout << "Implementation: VECTOR" << std::endl;
 				}
+				else if (strcmp(argv[i], "CUDA") == 0)
+				{
+					implementation_to_test = Ped::CUDA;
+					std::cout << "Implementation: CUDA" << std::endl;
+				}
 				else {
 					implementation_to_test = Ped::SEQ;
 					std::cout << "Fallback implementation: SEQ" << std::endl;
@@ -109,7 +114,7 @@ int main(int argc, char*argv[]) {
 		model.setup(parser.getAgents(), parser.getWaypoints(), implementation_to_test, num_threads);
 
 		// Default number of steps to simulate. Feel free to change this.
-		const int maxNumberOfStepsToSimulate = 1000000;
+		const int maxNumberOfStepsToSimulate = 10000;
 		
 				
 

@@ -54,7 +54,6 @@ namespace Ped{
 		// Thread tick function, moves Tagent between id low and high
 		static void thread_tick(Ped::Model* model, int thread_id);
 
-		// The number of threads
 		int num_threads;
 	
 		// Denotes which implementation (sequential, parallel implementations..)
@@ -65,7 +64,6 @@ namespace Ped{
 		// The agents in this scenario
 		std::vector<Tagent*> agents;
 
-		// The array of agents in this scenario
 		Tagents* agents_array;
 
 		// The waypoints in this scenario
