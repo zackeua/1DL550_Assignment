@@ -120,17 +120,26 @@ void Ped::Model::tick()
 		case IMPLEMENTATION::VECTOR:
 			{
 			for (int i = 0; i < agents.size(); i += 4) {
-				this->agents_array->destination[i] = this->agents_array->getNextDestination(i);
-				this->agents_array->destination[i+1] = this->agents_array->getNextDestination(i+1);
-				this->agents_array->destination[i+2] = this->agents_array->getNextDestination(i+2);
-				this->agents_array->destination[i+3] = this->agents_array->getNextDestination(i+3);
-				
+				// Updating this->agents_array->agentReachedDestination
+				this->agents_array->updateNextDestination(i);
+				this->agents_array->updateNextDestination(i+1);
+				this->agents_array->updateNextDestination(i+2);
+				this->agents_array->updateNextDestination(i+3);
+
+				// Computing the next destination based on where the agent is
+				this->agents_array->destination[i] = this->agents_array->agentReachedDestination || this->agents_array->destination[i] == NULL ? \
+													 this->agents_array->waypoints[i]->front() : this->agents_array->destination[i];
+				this->agents_array->destination[i+1] = this->agents_array->agentReachedDestination || this->agents_array->destination[i+1] == NULL ? \
+													   this->agents_array->waypoints[i+1]->front() : this->agents_array->destination[i+1];
+				this->agents_array->destination[i+2] = this->agents_array->agentReachedDestination || this->agents_array->destination[i+2] == NULL ? \
+													   this->agents_array->waypoints[i+2]->front() : this->agents_array->destination[i+2];
+				this->agents_array->destination[i+3] = this->agents_array->agentReachedDestination || this->agents_array->destination[i+3] == NULL ? \
+													   this->agents_array->waypoints[i+3]->front() : this->agents_array->destination[i+3];
+
 				if (this->agents_array->destination[i] == NULL) {return;}
 				if (this->agents_array->destination[i+1] == NULL) {return;}
 				if (this->agents_array->destination[i+2] == NULL) {return;}
 				if (this->agents_array->destination[i+3] == NULL) {return;}
-
-
 
 				// SIMD: recleare diffX and diffY as simd
 				

@@ -45,7 +45,7 @@ namespace Ped {
 		float* dest_x;
 		float* dest_y;
 		float* dest_r;
-
+		bool agentReachedDestination;
 		
 		float** waypoint_x;
 		float** waypoint_y;
@@ -68,7 +68,7 @@ namespace Ped {
 		// The queue of all destinations that this agent still has to visit
 		deque<Twaypoint*>** waypoints;
 
-		Ped::Twaypoint* getNextDestination(int i);
+		void updateNextDestination(int i);
 	private:
 		Tagents() {};
 

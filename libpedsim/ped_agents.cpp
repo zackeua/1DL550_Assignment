@@ -27,7 +27,8 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
     this->destination = new Twaypoint*[agents.size()];
     this->lastDestination = new Twaypoint*[agents.size()];
     this->waypoints = new deque<Twaypoint*>*[agents.size()];
-	
+	this->agentReachedDestination = false;
+
 	this->waypoint_x = new float*[agents.size()];
 	this->waypoint_y = new float*[agents.size()];
 	this->waypoint_r = new float*[agents.size()];
@@ -58,7 +59,10 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
 }
 
 void Ped::Tagents::computeNextDesiredPosition(int i) {
-	this->destination[i] = getNextDestination(i);
+	updateNextDestination(i);
+	this->destination[i] = this->agentReachedDestination || this->destination[i] == NULL ?\
+						   this->waypoints[i]->front() : this->destination[i];
+	
 	if (this->destination[i] == NULL) {
 		// no destination, no need to
 		// compute where to move to
@@ -85,20 +89,18 @@ void Ped::Tagents::computeNextDesiredPosition(int i) {
 	this->agents[i]->setY(y[i]);
 }
 
-Ped::Twaypoint* Ped::Tagents::getNextDestination(int i) {
-	bool agentReachedDestination = false;
-
+void Ped::Tagents::updateNextDestination(int i) {
 	// If the destination isn't null, then compute if the agent reached its destination and add it to the end of the deque.
 	if (this->destination[i] != NULL) {
 		double diffX = dest_x[i] - this->x[i];
 		double diffY = dest_y[i] - this->y[i];
 		double length = sqrt(diffX * diffX + diffY * diffY);
-		agentReachedDestination = length < this->dest_r[i];
+		this->agentReachedDestination = length < this->dest_r[i];
 		this->waypoints[i]->push_back(this->destination[i]);
 	}
 
 	// If the destination is null, or if the agent has reached its destination, then we compute its new destination coordinates.
-	if (this->destination[i] == NULL || agentReachedDestination) {
+	if (this->destination[i] == NULL || this->agentReachedDestination) {
 		this->dest_x[i] = this->waypoint_x[i][this->waypoint_ptr[i]];
 		this->dest_y[i] = this->waypoint_y[i][this->waypoint_ptr[i]];
 		this->dest_r[i] = this->waypoint_r[i][this->waypoint_ptr[i]];
@@ -107,6 +109,4 @@ Ped::Twaypoint* Ped::Tagents::getNextDestination(int i) {
 		if (this->waypoint_ptr[i] == this->waypoint_len[i])
 			this->waypoint_ptr[i] = 0;
 	}
-
-	return agentReachedDestination || this->destination[i] == NULL ? this->waypoints[i]->front() : this->destination[i];
 }
