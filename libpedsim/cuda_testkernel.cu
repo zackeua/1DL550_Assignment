@@ -32,20 +32,17 @@ __global__ void cuda_func(int n, Ped::Cuagents* cuda_agents) {
 	//blockIdx.x * blockDim.x + threadIdx.x);
 
 	//printf("Index: %d, n = %d\n", blockIdx.x * blockDim.x + threadIdx.x, n);
-
+	float f;
 	for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += (blockIdx.x+1) * blockDim.x) {
 		double diffX = cuda_agents->dest_x[i] - cuda_agents->x[i];
 		double diffY = cuda_agents->dest_y[i] - cuda_agents->y[i];
 
 		double len = sqrt(diffX * diffX + diffY * diffY);
-		
-
-
 
 		cuda_agents->x[i] = (int)round(cuda_agents->x[i] + diffX / len);
 		cuda_agents->y[i] = (int)round(cuda_agents->y[i] + diffY / len);
 
-		printf("%f\n", cuda_agents->x[i]);
+		//printf("%f\n", cuda_agents->x[i]);
 
 		// If the destination is null, or if the agent has reached its destination, then we compute its new destination coordinates.
 		if (len < cuda_agents->dest_r[i]) {
@@ -82,12 +79,20 @@ void Ped::Model::cuda_tick(Ped::Model* model) {
 	
 	cudaStatus = cudaDeviceSynchronize();
 	
-	cudaMemcpy(model->agents_array->x, model->cuda_array.x, model->agents.size() * sizeof(float), cudaMemcpyDeviceToHost);
-	cudaMemcpy(model->agents_array->y, model->cuda_array.y, model->agents.size() * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaStatus = cudaMemcpy((void**)&model->agents_array->x, (void**)&model->cuda_array.x, model->agents.size() * sizeof(float), cudaMemcpyDeviceToHost);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "%d\n", cudaStatus);
+		fprintf(stderr, "addWithCuda1 failed!\n");
+		return;
+	}
+	cudaStatus = cudaMemcpy(model->agents_array->y, model->cuda_array.y, 1 * sizeof(float), cudaMemcpyDeviceToHost);
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "addWithCuda2 failed!\n");
+		return;
+	}
+	//printf("Cuda: (%f, %f)\n", model->cuda_array.x[0], model->cuda_array.y[0]);
 
-	printf("Cuda: (%f, %f)\n", model->cuda_array.x[0], model->cuda_array.y[0]);
-
-	//printf("Model: (%f, %f)\n", model->agents_array->x[0], model->agents_array->y[0]);
+	printf("Model: (%f, %f)\n", model->agents_array->x[0], model->agents_array->y[0]);
 
 	//printf("Agent: (%f, %f)\n", model->agents[0]->getX(), model->agents[0]->getY());
 
