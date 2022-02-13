@@ -3,7 +3,10 @@
 
 #include <stdio.h>
 #include "ped_agents.h"
+#include "ped_agent.h"
+
 #include "ped_waypoint.h"
+#include "ped_cuda.h"
 
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
 
@@ -24,59 +27,41 @@ void hello()
 	print_func <<<2, 10>>> ();
 }
 
-__global__ void cuda_func(int n, Ped::Tagents* agents_array) {
+__global__ void cuda_func(int n,Ped::Cuagents* cuda_agents) {
 	int index = threadIdx.x;
 	int stride = blockDim.x;
 
 	for (int i = index; i < n; i += stride) {
-		bool agentReachedDestination = false;
-
-		if (agents_array->destination[i] != NULL) {
-			double diffX = agents_array->dest_x[i] - agents_array->x[i];
-			double diffY = agents_array->dest_y[i] - agents_array->y[i];
-			double length = sqrt(diffX * diffX + diffY * diffY);
-			agentReachedDestination = length < agents_array->dest_r[i];
-		}
-
-		if (agentReachedDestination || agents_array->destination[i] == NULL) {
-			agents_array->dest_x[i] = agents_array->waypoint_x[i][agents_array->waypoint_ptr[i]];
-			agents_array->dest_y[i] = agents_array->waypoint_y[i][agents_array->waypoint_ptr[i]];
-			agents_array->dest_r[i] = agents_array->waypoint_r[i][agents_array->waypoint_ptr[i]];
-			
-			agents_array->waypoint_ptr[i] += 1;
-			if (agents_array->waypoint_ptr[i] == agents_array->waypoint_len[i])
-				agents_array->waypoint_ptr[i] = 0;
-		}
-
-		agents_array->destination[i] = agents_array->agentReachedDestination[i] || agents_array->destination[i] == NULL ? \
-						  			   agents_array->waypoints[i]->front() : agents_array->destination[i];
-
-		if (agents_array->destination[i] == NULL) { return; }
-		
-		// Safe to print here
-		double diffX = agents_array->dest_x[i] - agents_array->x[i];
-		double diffY = agents_array->dest_y[i] - agents_array->y[i];
-		double len = sqrt(diffX * diffX + diffY * diffY);
-		agents_array->x[i] = (int)round(agents_array->x[i] + diffX / len);
-		agents_array->y[i] = (int)round(agents_array->y[i] + diffY / len);
+		cuda_agents->computeNextDesiredPosition(i);
 	}
 }
 
 int cuda_tick(Ped::Tagents* agents) {
-	Ped::Tagents* cuda_agents;
+	Ped::Cuagents cuda_agents = Cuagents(agents);
 	cudaError_t cudaStatus;
+
+
+
 	cudaStatus = cudaSetDevice(0);
-	cudaStatus = cudaMallocManaged((void**)&cuda_agents, sizeof(agents));
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "addWithCuda failed!\n");
 		return 1;
 	}
+
+	
 
 	int number_of_blocks = 1;
 	int threads_per_block = 1;
 	cuda_func <<<number_of_blocks, threads_per_block>>> (cuda_agents->agents.size(), cuda_agents);
 
 	cudaStatus = cudaDeviceSynchronize();
+	
+	for (int i = 0; i < agents->agents.size(); i++) {
+		agents->agents[i]->setX(cuda_agents->x[i]);
+		agents->agents[i]->setY(cuda_agents->y[i]);
+
+	}
+	
 	cudaFree(cuda_agents);
 
 	return 0;
