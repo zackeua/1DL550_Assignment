@@ -7,6 +7,7 @@
 //
 #include "ped_model.h"
 #include "ped_waypoint.h"
+#include "ped_cuda.h"
 #include "ped_model.h"
 #include <iostream>
 #include <stack>
@@ -61,8 +62,13 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 		
 	}
 
-
 	this->agents_array = new Tagents(agents);
+
+
+	if (implementation == IMPLEMENTATION::CUDA) {
+		this->cuda_array = Cuagents(agents_array);		
+	}
+
 
 	// Sets the chosen implemenation. Standard in the given code is SEQ
 	this->implementation = implementation;
@@ -265,7 +271,7 @@ void Ped::Model::tick()
 
 			case IMPLEMENTATION::CUDA:
 			{
-				//cuda_tick(this->agents_array);
+				cuda_tick(this);
 
 			}
 			break;

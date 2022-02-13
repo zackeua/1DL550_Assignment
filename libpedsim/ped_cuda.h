@@ -32,13 +32,13 @@ namespace Ped {
 
 	class Cuagents {
 	public:
-        Cuagents();
+        Cuagents() {};
 		Cuagents(Ped::Tagents* agents_array);
 		
-        __device__
+        
         void computeNextDesiredPosition(int i);
         
-        void addWaypoint(deque<Twaypoint*>* wp, int i);
+        void free();
 
 		//std::vector<Ped::Tagent*> agents;
 
@@ -64,6 +64,7 @@ namespace Ped {
 		float* desiredPositionX;
 		float* desiredPositionY;    
 
+        int size;
         
 	};
 }

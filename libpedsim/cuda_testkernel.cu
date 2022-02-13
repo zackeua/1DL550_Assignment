@@ -5,6 +5,7 @@
 #include "ped_agents.h"
 #include "ped_agent.h"
 #include "ped_cuda.h"
+#include "ped_model.h"
 
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
 
@@ -25,17 +26,44 @@ void hello()
 	print_func <<<2, 10>>> ();
 }
 
-__global__ void cuda_func(int n,Ped::Cuagents* cuda_agents) {
-	int index = threadIdx.x;
-	int stride = blockDim.x;
+__global__ void cuda_func(int n, Ped::Cuagents* cuda_agents) {
+	
+	//printf("Hello ogge from thread %d\n", 
+	//blockIdx.x * blockDim.x + threadIdx.x);
 
-	for (int i = index; i < n; i += stride) {
-		cuda_agents->computeNextDesiredPosition(i);
+	//printf("Index: %d, n = %d\n", blockIdx.x * blockDim.x + threadIdx.x, n);
+
+	for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += (blockIdx.x+1) * blockDim.x) {
+		double diffX = cuda_agents->dest_x[i] - cuda_agents->x[i];
+		double diffY = cuda_agents->dest_y[i] - cuda_agents->y[i];
+
+		double len = sqrt(diffX * diffX + diffY * diffY);
+		
+
+
+
+		cuda_agents->x[i] = (int)round(cuda_agents->x[i] + diffX / len);
+		cuda_agents->y[i] = (int)round(cuda_agents->y[i] + diffY / len);
+
+		printf("%f\n", cuda_agents->x[i]);
+
+		// If the destination is null, or if the agent has reached its destination, then we compute its new destination coordinates.
+		if (len < cuda_agents->dest_r[i]) {
+			cuda_agents->dest_x[i] = cuda_agents->waypoint_x[i][cuda_agents->waypoint_ptr[i]];
+			cuda_agents->dest_y[i] = cuda_agents->waypoint_y[i][cuda_agents->waypoint_ptr[i]];
+			cuda_agents->dest_r[i] = cuda_agents->waypoint_r[i][cuda_agents->waypoint_ptr[i]];
+
+			cuda_agents->waypoint_ptr[i] += 1;
+			if (cuda_agents->waypoint_ptr[i] == cuda_agents->waypoint_len[i])
+				cuda_agents->waypoint_ptr[i] = 0;
+		}
 	}
 }
 
-int cuda_tick(Ped::Tagents* agents) {
-	Ped::Cuagents cuda_agents = Ped::Cuagents(agents);
+void Ped::Model::cuda_tick(Ped::Model* model) {
+
+
+
 	cudaError_t cudaStatus;
 
 
@@ -43,25 +71,36 @@ int cuda_tick(Ped::Tagents* agents) {
 	cudaStatus = cudaSetDevice(0);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "addWithCuda failed!\n");
-		return 1;
+		return;
 	}
 
 	
 
-	int number_of_blocks = 1;
-	int threads_per_block = 1;
-	cuda_func <<<number_of_blocks, threads_per_block>>> (agents->agents.size(), &cuda_agents);
-
+	int number_of_blocks = 2;
+	int threads_per_block = 100;
+	cuda_func <<<number_of_blocks, threads_per_block>>> (model->agents.size(), &model->cuda_array);
+	
 	cudaStatus = cudaDeviceSynchronize();
 	
-	for (int i = 0; i < agents->agents.size(); i++) {
-		agents->agents[i]->setX(cuda_agents.x[i]);
-		agents->agents[i]->setY(cuda_agents.y[i]);
+	cudaMemcpy(model->agents_array->x, model->cuda_array.x, model->agents.size() * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaMemcpy(model->agents_array->y, model->cuda_array.y, model->agents.size() * sizeof(float), cudaMemcpyDeviceToHost);
 
+	printf("Cuda: (%f, %f)\n", model->cuda_array.x[0], model->cuda_array.y[0]);
+
+	//printf("Model: (%f, %f)\n", model->agents_array->x[0], model->agents_array->y[0]);
+
+	//printf("Agent: (%f, %f)\n", model->agents[0]->getX(), model->agents[0]->getY());
+
+	for (int i = 0; i < model->agents.size(); i++) {
+		
+		//model->agents[i]->setX(0);
+		//model->agents[i]->setY(0);
+
+		model->agents[i]->setX(model->agents_array->x[i]);
+		model->agents[i]->setY(model->agents_array->y[i]);
 	}
-	
+	//printf("agents->agents.size(): %d\n", model->agents.size());
 
-	return 0;
 }
 
 int cuda_test()
