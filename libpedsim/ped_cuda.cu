@@ -5,9 +5,6 @@
 //
 // Adapted for Low Level Parallel Programming 2017
 //
-#include "ped_agent.h"
-#include "ped_agents.h"
-#include "ped_waypoint.h"
 #include "ped_cuda.h"
 #include <math.h>
 
@@ -16,18 +13,18 @@
 
 Ped::Cuagents::Cuagents(Ped::Tagents* agents_array) {
 	//static float *restrict mat_a __attribute__((aligned (XMM_ALIGNMENT_BYTES)));
-    cudaMalloc((void**)&this->x, sizeof(float) * agents_array->agents.size());
-    cudaMalloc((void**)&this->y, sizeof(float) * agents_array->agents.size());
+    cudaMallocManaged((void**)&this->x, sizeof(float) * agents_array->agents.size());
+    cudaMallocManaged((void**)&this->y, sizeof(float) * agents_array->agents.size());
 
-    cudaMalloc((void**)&this->dest_x, sizeof(float) * agents_array->agents.size());
-    cudaMalloc((void**)&this->dest_y, sizeof(float) * agents_array->agents.size());
-    cudaMalloc((void**)&this->dest_r, sizeof(float) * agents_array->agents.size());
+    cudaMallocManaged((void**)&this->dest_x, sizeof(float) * agents_array->agents.size());
+    cudaMallocManaged((void**)&this->dest_y, sizeof(float) * agents_array->agents.size());
+    cudaMallocManaged((void**)&this->dest_r, sizeof(float) * agents_array->agents.size());
 
-    cudaMalloc((void**)&this->waypoint_x, sizeof(float*) * agents_array->agents.size());
-    cudaMalloc((void**)&this->waypoint_y, sizeof(float*) * agents_array->agents.size());
-    cudaMalloc((void**)&this->waypoint_r, sizeof(float*) * agents_array->agents.size());
-    cudaMalloc((void**)&this->waypoint_ptr, sizeof(float) * agents_array->agents.size());
-    cudaMalloc((void**)&this->waypoint_len, sizeof(float) * agents_array->agents.size());
+    cudaMallocManaged((void**)&this->waypoint_x, sizeof(float*) * agents_array->agents.size());
+    cudaMallocManaged((void**)&this->waypoint_y, sizeof(float*) * agents_array->agents.size());
+    cudaMallocManaged((void**)&this->waypoint_r, sizeof(float*) * agents_array->agents.size());
+    cudaMallocManaged((void**)&this->waypoint_ptr, sizeof(float) * agents_array->agents.size());
+    cudaMallocManaged((void**)&this->waypoint_len, sizeof(float) * agents_array->agents.size());
 
 	
 	for (int i = 0; i < agents_array->agents.size(); i++) {
@@ -35,9 +32,9 @@ Ped::Cuagents::Cuagents(Ped::Tagents* agents_array) {
         this->y[i] = (float)agents_array->agents[i]->getY();
 		
 
-        cudaMalloc((void**)&this->waypoint_x[i], sizeof(float) * agents_array->waypoints[i]->size());
-        cudaMalloc((void**)&this->waypoint_y[i], sizeof(float) * agents_array->waypoints[i]->size());
-        cudaMalloc((void**)&this->waypoint_r[i], sizeof(float) * agents_array->waypoints[i]->size());
+        cudaMallocManaged((void**)&this->waypoint_x[i], sizeof(float) * agents_array->waypoints[i]->size());
+        cudaMallocManaged((void**)&this->waypoint_y[i], sizeof(float) * agents_array->waypoints[i]->size());
+        cudaMallocManaged((void**)&this->waypoint_r[i], sizeof(float) * agents_array->waypoints[i]->size());
 		this->waypoint_ptr[i] = 0;
 		this->waypoint_len[i] = this->waypoints[i]->size();
 

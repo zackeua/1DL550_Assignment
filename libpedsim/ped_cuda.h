@@ -16,8 +16,7 @@
 #ifndef _ped_cuagents_h_
 #define _ped_cuagents_h_ 1
 
-#include <vector>
-#include <deque>
+
 
 #include "ped_agents.h"
 #include "ped_agent.h"
@@ -33,14 +32,15 @@ namespace Ped {
 
 	class Cuagents {
 	public:
+        Cuagents();
 		Cuagents(Ped::Tagents* agents_array);
 		
-
+        __device__
         void computeNextDesiredPosition(int i);
         
         void addWaypoint(deque<Twaypoint*>* wp, int i);
 
-		std::vector<Ped::Tagent*> agents;
+		//std::vector<Ped::Tagent*> agents;
 
 		// The agent's current position
 		float* x;
@@ -62,24 +62,7 @@ namespace Ped {
 
 		// The agent's desired next position
 		float* desiredPositionX;
-		float* desiredPositionY;
-
-			// The current destination (may require several steps to reach)
-		Twaypoint** destination;
-
-		// The last destination
-		Twaypoint** lastDestination;
-
-		// The queue of all destinations that this agent still has to visit
-		deque<Twaypoint*>** waypoints;
-
-		void updateDestination(int i);
-	private:
-		Cuagents() {};
-
-		
-
-	
+		float* desiredPositionY;    
 
         
 	};

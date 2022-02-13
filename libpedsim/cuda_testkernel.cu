@@ -4,8 +4,6 @@
 #include <stdio.h>
 #include "ped_agents.h"
 #include "ped_agent.h"
-
-#include "ped_waypoint.h"
 #include "ped_cuda.h"
 
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
@@ -37,7 +35,7 @@ __global__ void cuda_func(int n,Ped::Cuagents* cuda_agents) {
 }
 
 int cuda_tick(Ped::Tagents* agents) {
-	Ped::Cuagents cuda_agents = Cuagents(agents);
+	Ped::Cuagents cuda_agents = Ped::Cuagents(agents);
 	cudaError_t cudaStatus;
 
 
@@ -52,17 +50,16 @@ int cuda_tick(Ped::Tagents* agents) {
 
 	int number_of_blocks = 1;
 	int threads_per_block = 1;
-	cuda_func <<<number_of_blocks, threads_per_block>>> (cuda_agents->agents.size(), cuda_agents);
+	cuda_func <<<number_of_blocks, threads_per_block>>> (agents->agents.size(), &cuda_agents);
 
 	cudaStatus = cudaDeviceSynchronize();
 	
 	for (int i = 0; i < agents->agents.size(); i++) {
-		agents->agents[i]->setX(cuda_agents->x[i]);
-		agents->agents[i]->setY(cuda_agents->y[i]);
+		agents->agents[i]->setX(cuda_agents.x[i]);
+		agents->agents[i]->setY(cuda_agents.y[i]);
 
 	}
 	
-	cudaFree(cuda_agents);
 
 	return 0;
 }
