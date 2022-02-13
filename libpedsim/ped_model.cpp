@@ -65,7 +65,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 
 	
-	//this->cuda_array = Cuagents(agents_array);		
+	this->cuda_array = Cuagents(agents_array);		
 	
 
 
@@ -127,7 +127,7 @@ void Ped::Model::tick()
 			
 			__m128 diffX, diffY, sqrt_arg, len, newX, newY, mask1;
 			__m128i waypoint_ptr, mask2;
-			float* len_arr = new float[4];
+			//float* len_arr = new float[4];
 
 
 			for (int i = 0; i < agents.size(); i += 4) {
@@ -141,8 +141,8 @@ void Ped::Model::tick()
 				diffX = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_load_ps(this->agents_array->x + i));
 				diffY = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_y + i), _mm_load_ps(this->agents_array->y + i));
 				sqrt_arg = _mm_add_ps(_mm_mul_ps(diffX, diffX), _mm_mul_ps(diffY, diffY));
-				len = _mm_mul_ps(sqrt_arg, _mm_rsqrt_ps(sqrt_arg));
-
+				//len = _mm_mul_ps(sqrt_arg, _mm_rsqrt_ps(sqrt_arg));
+				len = _mm_sqrt_ps(sqrt_arg);
 				
 				// Calculate new x and y position and store in x and y arrays
 				newX = _mm_add_ps(_mm_load_ps(this->agents_array->x + i), _mm_div_ps(diffX, len));
@@ -174,9 +174,10 @@ void Ped::Model::tick()
 				diffX = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_load_ps(this->agents_array->x + i));
 				diffY = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_y + i), _mm_load_ps(this->agents_array->y + i));
 				sqrt_arg = _mm_add_ps(_mm_mul_ps(diffX, diffX), _mm_mul_ps(diffY, diffY));
-				len = _mm_mul_ps(sqrt_arg, _mm_rsqrt_ps(sqrt_arg));
+				//len = _mm_mul_ps(sqrt_arg, _mm_rsqrt_ps(sqrt_arg));
+				len = _mm_sqrt_ps(sqrt_arg);
 
-				_mm_store_ps(len_arr, len);
+				//_mm_store_ps(len_arr, len);
 
 				if (len[0] < this->agents_array->dest_r[i]) {
 					this->agents_array->dest_x[i] = this->agents_array->waypoint_x[i][this->agents_array->waypoint_ptr[i]];
@@ -214,8 +215,11 @@ void Ped::Model::tick()
 					if (this->agents_array->waypoint_ptr[i+3] == this->agents_array->waypoint_len[i+3])
 						this->agents_array->waypoint_ptr[i+3] = 0;
 				}
+				
 				/*
 				mask1 = _mm_cmplt_ps(len, _mm_load_ps(this->agents_array->dest_r + i));
+				_mm_store_ps(len_arr, mask1);
+
 				
 				_mm_store_ps(this->agents_array->dest_x + i, _mm_blendv_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_set_ps(this->agents_array->waypoint_x[i+3][this->agents_array->waypoint_ptr[i+3]],
 																					  this->agents_array->waypoint_x[i+2][this->agents_array->waypoint_ptr[i+2]],
@@ -249,7 +253,7 @@ void Ped::Model::tick()
 			case IMPLEMENTATION::CUDA:
 			{
 				//float f;
-				//cuda_tick(this);
+				cuda_tick(this);
 				//std::cin >> f;
 			}
 			break;
@@ -333,6 +337,7 @@ void Ped::Model::cleanup() {
 
 Ped::Model::~Model()
 {
+	this->cuda_array.free(agents_array);
 	//std::for_each(agents.begin(), agents.end(), [](Ped::Tagent *agent){delete agent;});
 	//std::for_each(destinations.begin(), destinations.end(), [](Ped::Twaypoint *destination){delete destination; });
 }
