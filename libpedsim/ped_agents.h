@@ -31,8 +31,7 @@ namespace Ped {
 		
 
         void computeNextDesiredPosition(int i);
-        
-        void addWaypoint(deque<Twaypoint*>* wp, int i);
+
 
 		std::vector<Ped::Tagent*> agents;
 
@@ -45,7 +44,6 @@ namespace Ped {
 		float* dest_x;
 		float* dest_y;
 		float* dest_r;
-		bool* agentReachedDestination;
 		
 		float** waypoint_x;
 		float** waypoint_y;
@@ -54,21 +52,8 @@ namespace Ped {
 		int* waypoint_len;
 		
 
-
-		// The agent's desired next position
-		float* desiredPositionX;
-		float* desiredPositionY;
-
-			// The current destination (may require several steps to reach)
-		Twaypoint** destination;
-
-		// The last destination
-		Twaypoint** lastDestination;
-
 		// The queue of all destinations that this agent still has to visit
 		deque<Twaypoint*>** waypoints;
-
-		void updateDestination(int i);
 	private:
 		Tagents() {};
 

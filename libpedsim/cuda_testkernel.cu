@@ -27,13 +27,15 @@ void hello()
 }
 
 __global__ void cuda_func(int n, Ped::Cuagents* cuda_agents) {
-	
-	//printf("Hello ogge from thread %d\n", 
-	//blockIdx.x * blockDim.x + threadIdx.x);
 
 	//printf("Index: %d, n = %d\n", blockIdx.x * blockDim.x + threadIdx.x, n);
-	float f;
+	//float f;
+	cuda_agents->x[0] = 12;
+	cuda_agents->y[0] = 12;
+	
 	for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += (blockIdx.x+1) * blockDim.x) {
+		
+		
 		double diffX = cuda_agents->dest_x[i] - cuda_agents->x[i];
 		double diffY = cuda_agents->dest_y[i] - cuda_agents->y[i];
 
@@ -54,6 +56,7 @@ __global__ void cuda_func(int n, Ped::Cuagents* cuda_agents) {
 			if (cuda_agents->waypoint_ptr[i] == cuda_agents->waypoint_len[i])
 				cuda_agents->waypoint_ptr[i] = 0;
 		}
+		
 	}
 }
 
@@ -65,34 +68,35 @@ void Ped::Model::cuda_tick(Ped::Model* model) {
 
 
 
+	
 	cudaStatus = cudaSetDevice(0);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "addWithCuda failed!\n");
 		return;
 	}
-
-	cudaStatus = cudaMemcpy(model->agents_array->x, model->cuda_array.x, 0 * sizeof(float), cudaMemcpyDeviceToHost);
+	
+	cudaStatus = cudaMemcpy(model->agents_array->x, model->cuda_array.x, 1 * sizeof(float), cudaMemcpyDeviceToHost);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "%d\n", cudaStatus);
 		fprintf(stderr, "addWithCuda0 failed!\n");
 		return;
 	}
 
-	int number_of_blocks = 2;
-	int threads_per_block = 100;
+	int number_of_blocks = 1;
+	int threads_per_block = 1;
 	
 	cuda_func <<<number_of_blocks, threads_per_block>>> (model->agents.size(), &model->cuda_array);
 	
 	cudaStatus = cudaDeviceSynchronize();
 	
-	cudaStatus = cudaMemcpy(model->agents_array->x, model->cuda_array.x, 0 * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaStatus = cudaMemcpy(model->agents_array->x, model->cuda_array.x, 1 * sizeof(float), cudaMemcpyDeviceToHost);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "%d\n", cudaStatus);
 		fprintf(stderr, "addWithCuda1 failed!\n");
 		return;
 	}
 	
-	cudaStatus = cudaMemcpy(model->agents_array->y, model->cuda_array.y, 0 * sizeof(float), cudaMemcpyDeviceToHost);
+	cudaStatus = cudaMemcpy(model->agents_array->y, model->cuda_array.y, 1 * sizeof(float), cudaMemcpyDeviceToHost);
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "addWithCuda2 failed!\n");
 		return;

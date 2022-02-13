@@ -20,7 +20,6 @@
 
 #include <xmmintrin.h>
 #include <smmintrin.h>
-
 #include <immintrin.h>
 
 
@@ -66,7 +65,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 
 
 	
-	this->cuda_array = Cuagents(agents_array);		
+	//this->cuda_array = Cuagents(agents_array);		
 	
 
 
@@ -85,7 +84,7 @@ void Ped::Model::tick()
 	// EDIT HERE FOR ASSIGNMENT 1
 	switch (this->implementation) {
 		case IMPLEMENTATION::SEQ:
-			//int pleb;
+			int pleb;
 			for (int i = 0; i < agents.size(); i++) {
 				agents_array->computeNextDesiredPosition(i);
 				//agents[i]->computeNextDesiredPosition();
@@ -125,134 +124,35 @@ void Ped::Model::tick()
 		
 		case IMPLEMENTATION::VECTOR:
 			{
-			__m128 initial_data, conditional_statement, zeros, boolean_values, diffX, diffY,\
-				   sqrt_arg, len, all_updated, actually_reached, newX, newY, destX, destY, destR;
+			
+			__m128 diffX, diffY, sqrt_arg, len, newX, newY, mask1;
+			__m128i waypoint_ptr, mask2;
+			float* len_arr = new float[4];
+
 
 			for (int i = 0; i < agents.size(); i += 4) {
 				// This should be commented out
-				this->agents_array->updateDestination(i);
-				this->agents_array->updateDestination(i+1);
-				this->agents_array->updateDestination(i+2);
-				this->agents_array->updateDestination(i+3);
-
+				
 				// A started attempt of vectorizing the first if statement in updateDestination()
 
-				// // Load the initial reach data
-				// initial_data = _mm_set1_ps(*(this->agents_array->agentReachedDestination + i) == true);
 
-				// // Check for which agents the conditional statement is true
-				// conditional_statement = _mm_set1_ps(this->agents_array->destination + i != NULL);
-				// zeros = _mm_set1_ps(0.0);
-				// boolean_values = _mm_cmplt_ps(zeros, conditional_statement);
 
-				// // Compute the lengths to the destinations
-				// diffX = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_load_ps(this->agents_array->x + i));
-				// diffY = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_y + i), _mm_load_ps(this->agents_array->y + i));
-				// sqrt_arg = _mm_add_ps(_mm_mul_ps(diffX, diffX), _mm_mul_ps(diffY, diffY));
-				// len = _mm_mul_ps(sqrt_arg, _mm_rsqrt_ps(sqrt_arg));
-
-				// // Updating the reached vector
-				// all_updated = _mm_sub_ps(len, _mm_load_ps(this->agents_array->dest_r + i));
-
-				// // Blending the results (How do I connect this with agentReachedDestination?)
-				// actually_reached = _mm_blendv_ps(all_updated, initial_data, boolean_values);
-
-				// // Here, we have to store back the results
-
-				// // We only miss the comparison here. When we have figured it out, then we might be able to handle the second if statement.
-				// conditional_statement = _mm_set1_ps(this->agents_array->destination + i == NULL || this->agents_array->agentReachedDestination[i]);
-				// zeros = _mm_set1_ps(0.0);
-				// boolean_values = _mm_cmplt_ps(zeros, conditional_statement);
-
-				// // Update the x and y coordinate of the destintion, and its radius.
-				// destX = _mm_store_ps((this->agents_array->waypoint_x + i)[this->agents_array->waypoint_ptr + i]);
-				// destY = _mm_store_ps((this->agents_array->waypoint_y + i)[this->agents_array->waypoint_ptr + i]);
-				// destR = _mm_store_ps((this->agents_array->waypoint_r + i)[this->agents_array->waypoint_ptr + i]);
-
-				// // Here, we have to store back the values
-
-				// // We can't vectorize this since we are updating the vector in the struct
-				// if (this->agents_array->destination[i] == NULL || this->agents_array->agentReachedDestination[i]) {
-				// 	this->agents_array->waypoint_ptr[i] += 1;
-				// 	if (this->agents_array->waypoint_ptr[i] == this->agents_array->waypoint_len[i]) this->agents_array->waypoint_ptr[i] = 0;
-				// } if (this->agents_array->destination[i+1] == NULL || this->agents_array->agentReachedDestination[i+1]) {
-				// 	this->agents_array->waypoint_ptr[i+1] += 1;
-				// 	if (this->agents_array->waypoint_ptr[i+1] == this->agents_array->waypoint_len[i+1]) this->agents_array->waypoint_ptr[i+1] = 0;
-				// } if (this->agents_array->destination[i+2] == NULL || this->agents_array->agentReachedDestination[i+2]) {
-				// 	this->agents_array->waypoint_ptr[i+2] += 1;
-				// 	if (this->agents_array->waypoint_ptr[i+2] == this->agents_array->waypoint_len[i+2]) this->agents_array->waypoint_ptr[i+2] = 0;
-				// } if (this->agents_array->destination[i+3] == NULL || this->agents_array->agentReachedDestination[i+3]) {
-				// 	this->agents_array->waypoint_ptr[i+3] += 1;
-				// 	if (this->agents_array->waypoint_ptr[i+3] == this->agents_array->waypoint_len[i+3]) this->agents_array->waypoint_ptr[i+3] = 0;
-				// }
-
-				// // Computing the next destination based on where the agent is
-				this->agents_array->destination[i] = this->agents_array->agentReachedDestination[i] || this->agents_array->destination[i] == NULL ? \
-													 this->agents_array->waypoints[i]->front() : this->agents_array->destination[i];
-				this->agents_array->destination[i+1] = this->agents_array->agentReachedDestination[i+1] || this->agents_array->destination[i+1] == NULL ? \
-													   this->agents_array->waypoints[i+1]->front() : this->agents_array->destination[i+1];
-				this->agents_array->destination[i+2] = this->agents_array->agentReachedDestination[i+2] || this->agents_array->destination[i+2] == NULL ? \
-													   this->agents_array->waypoints[i+2]->front() : this->agents_array->destination[i+2];
-				this->agents_array->destination[i+3] = this->agents_array->agentReachedDestination[i+3] || this->agents_array->destination[i+3] == NULL ? \
-													   this->agents_array->waypoints[i+3]->front() : this->agents_array->destination[i+3];
-
-				// If the next destination is null, then we abort the update
-				if (this->agents_array->destination[i] == NULL) {return;}
-				if (this->agents_array->destination[i+1] == NULL) {return;}
-				if (this->agents_array->destination[i+2] == NULL) {return;}
-				if (this->agents_array->destination[i+3] == NULL) {return;}
-
+				// Compute the lengths to the destinations
 				diffX = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_load_ps(this->agents_array->x + i));
 				diffY = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_y + i), _mm_load_ps(this->agents_array->y + i));
-				/*
-				double diffX0 = this->agents_array->dest_x[i] - this->agents_array->x[i];
-				double diffY0 = this->agents_array->dest_y[i] - this->agents_array->y[i];
-
-				double diffX1 = this->agents_array->dest_x[i+1] - this->agents_array->x[i+1];
-				double diffY1 = this->agents_array->dest_y[i+1] - this->agents_array->y[i+1];
-
-				double diffX2 = this->agents_array->dest_x[i+2] - this->agents_array->x[i+2];
-				double diffY2 = this->agents_array->dest_y[i+2] - this->agents_array->y[i+2];
-
-				double diffX3 = this->agents_array->dest_x[i+3] - this->agents_array->x[i+3];
-				double diffY3 = this->agents_array->dest_y[i+3] - this->agents_array->y[i+3];
-				*/
 				sqrt_arg = _mm_add_ps(_mm_mul_ps(diffX, diffX), _mm_mul_ps(diffY, diffY));
-				
 				len = _mm_mul_ps(sqrt_arg, _mm_rsqrt_ps(sqrt_arg));
-				//sqrt_arg * 1/sqrt(sqrt_arg) <- faster
-				//__m128 len = _mm_sqrt_ps(sqrt_arg);
 
-
-				/*
-				double len0 = sqrt(diffX0 * diffX0 + diffY0 * diffY0);
-				double len1 = sqrt(diffX1 * diffX1 + diffY1 * diffY1);
-				double len2 = sqrt(diffX2 * diffX2 + diffY2 * diffY2);
-				double len3 = sqrt(diffX3 * diffX3 + diffY3 * diffY3);
-				*/
-
+				
+				// Calculate new x and y position and store in x and y arrays
 				newX = _mm_add_ps(_mm_load_ps(this->agents_array->x + i), _mm_div_ps(diffX, len));
 				newY = _mm_add_ps(_mm_load_ps(this->agents_array->y + i), _mm_div_ps(diffY, len));
 
 				_mm_store_ps(this->agents_array->x + i, _mm_round_ps (newX, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC)));
 				_mm_store_ps(this->agents_array->y + i, _mm_round_ps (newY, (_MM_FROUND_TO_NEAREST_INT |_MM_FROUND_NO_EXC)));
 
-				/*
-				this->agents_array->x[i] = (int)round(this->agents_array->x[i] + diffX0 / len0);
-				this->agents_array->y[i] = round(this->agents_array->y[i] + diffY0 / len0);
-
-				this->agents_array->x[i+1] = round(this->agents_array->x[i+1] + diffX1 / len1);
-				this->agents_array->y[i+1] = round(this->agents_array->y[i+1] + diffY1 / len1);
-
-				this->agents_array->x[i+2] = round(this->agents_array->x[i+2] + diffX2 / len2);
-				this->agents_array->y[i+2] = round(this->agents_array->y[i+2] + diffY2 / len2);
-
-				this->agents_array->x[i+3] = round(this->agents_array->x[i+3] + diffX3 / len3);
-				this->agents_array->y[i+3] = round(this->agents_array->y[i+3] + diffY3 / len3);
-				*/
-
 				// set new position in agent
-				///*
+				//
 				this->agents[i]->setX((int)round(this->agents_array->x[i]));
 				this->agents[i]->setY((int)round(this->agents_array->y[i]));
 				
@@ -264,15 +164,93 @@ void Ped::Model::tick()
 				
 				this->agents[i+3]->setX((int)round(this->agents_array->x[i+3]));
 				this->agents[i+3]->setY((int)round(this->agents_array->y[i+3]));
-				//*/
+				//
+
+
+
+				
+				
+				// Compute the new lengths to the destinations
+				diffX = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_load_ps(this->agents_array->x + i));
+				diffY = _mm_sub_ps(_mm_load_ps(this->agents_array->dest_y + i), _mm_load_ps(this->agents_array->y + i));
+				sqrt_arg = _mm_add_ps(_mm_mul_ps(diffX, diffX), _mm_mul_ps(diffY, diffY));
+				len = _mm_mul_ps(sqrt_arg, _mm_rsqrt_ps(sqrt_arg));
+
+				_mm_store_ps(len_arr, len);
+
+				if (len[0] < this->agents_array->dest_r[i]) {
+					this->agents_array->dest_x[i] = this->agents_array->waypoint_x[i][this->agents_array->waypoint_ptr[i]];
+					this->agents_array->dest_y[i] = this->agents_array->waypoint_y[i][this->agents_array->waypoint_ptr[i]];
+					this->agents_array->dest_r[i] = this->agents_array->waypoint_r[i][this->agents_array->waypoint_ptr[i]];
+
+					this->agents_array->waypoint_ptr[i] += 1;
+					if (this->agents_array->waypoint_ptr[i] == this->agents_array->waypoint_len[i])
+						this->agents_array->waypoint_ptr[i] = 0;
+				}
+				if (len[1] < this->agents_array->dest_r[i+1]) {
+					this->agents_array->dest_x[i+1] = this->agents_array->waypoint_x[i+1][this->agents_array->waypoint_ptr[i+1]];
+					this->agents_array->dest_y[i+1] = this->agents_array->waypoint_y[i+1][this->agents_array->waypoint_ptr[i+1]];
+					this->agents_array->dest_r[i+1] = this->agents_array->waypoint_r[i+1][this->agents_array->waypoint_ptr[i+1]];
+
+					this->agents_array->waypoint_ptr[i+1] += 1;
+					if (this->agents_array->waypoint_ptr[i+1] == this->agents_array->waypoint_len[i+1])
+						this->agents_array->waypoint_ptr[i+1] = 0;
+				}
+				if (len[2] < this->agents_array->dest_r[i+2]) {
+					this->agents_array->dest_x[i+2] = this->agents_array->waypoint_x[i+2][this->agents_array->waypoint_ptr[i+2]];
+					this->agents_array->dest_y[i+2] = this->agents_array->waypoint_y[i+2][this->agents_array->waypoint_ptr[i+2]];
+					this->agents_array->dest_r[i+2] = this->agents_array->waypoint_r[i+2][this->agents_array->waypoint_ptr[i+2]];
+
+					this->agents_array->waypoint_ptr[i+2] += 1;
+					if (this->agents_array->waypoint_ptr[i+2] == this->agents_array->waypoint_len[i+2])
+						this->agents_array->waypoint_ptr[i+2] = 0;
+				}
+				if (len[3] < this->agents_array->dest_r[i+3]) {
+					this->agents_array->dest_x[i+3] = this->agents_array->waypoint_x[i+3][this->agents_array->waypoint_ptr[i+3]];
+					this->agents_array->dest_y[i+3] = this->agents_array->waypoint_y[i+3][this->agents_array->waypoint_ptr[i+3]];
+					this->agents_array->dest_r[i+3] = this->agents_array->waypoint_r[i+3][this->agents_array->waypoint_ptr[i+3]];
+
+					this->agents_array->waypoint_ptr[i+3] += 1;
+					if (this->agents_array->waypoint_ptr[i+3] == this->agents_array->waypoint_len[i+3])
+						this->agents_array->waypoint_ptr[i+3] = 0;
+				}
+				/*
+				mask1 = _mm_cmplt_ps(len, _mm_load_ps(this->agents_array->dest_r + i));
+				
+				_mm_store_ps(this->agents_array->dest_x + i, _mm_blendv_ps(_mm_load_ps(this->agents_array->dest_x + i), _mm_set_ps(this->agents_array->waypoint_x[i+3][this->agents_array->waypoint_ptr[i+3]],
+																					  this->agents_array->waypoint_x[i+2][this->agents_array->waypoint_ptr[i+2]],
+																					  this->agents_array->waypoint_x[i+1][this->agents_array->waypoint_ptr[i+1]],
+																					  this->agents_array->waypoint_x[i][this->agents_array->waypoint_ptr[i]]), mask1));
+
+				_mm_store_ps(this->agents_array->dest_y + i, _mm_blendv_ps(_mm_load_ps(this->agents_array->dest_y + i), _mm_set_ps(this->agents_array->waypoint_y[i+3][this->agents_array->waypoint_ptr[i+3]],
+																					  this->agents_array->waypoint_y[i+2][this->agents_array->waypoint_ptr[i+2]],
+																					  this->agents_array->waypoint_y[i+1][this->agents_array->waypoint_ptr[i+1]],
+																					  this->agents_array->waypoint_y[i][this->agents_array->waypoint_ptr[i]]), mask1));
+
+
+				_mm_store_ps(this->agents_array->dest_r + i, _mm_blendv_ps(_mm_load_ps(this->agents_array->dest_r + i), _mm_set_ps(this->agents_array->waypoint_r[i+3][this->agents_array->waypoint_ptr[i+3]],
+																					  this->agents_array->waypoint_r[i+2][this->agents_array->waypoint_ptr[i+2]],
+																					  this->agents_array->waypoint_r[i+1][this->agents_array->waypoint_ptr[i+1]],
+																					  this->agents_array->waypoint_r[i][this->agents_array->waypoint_ptr[i]]), mask1));
+
+
+				waypoint_ptr = _mm_blendv_epi8(_mm_load_si128((__m128i*)(this->agents_array->waypoint_ptr + i)), _mm_add_epi32(_mm_load_si128((__m128i*)(this->agents_array->waypoint_ptr + i)), _mm_set1_epi32(0xFFFFFFFF)), (__m128i)mask1);
+				
+				mask2 = _mm_cmpeq_epi32(waypoint_ptr, (__m128i)_mm_load_si128((__m128i*)(this->agents_array + i)));
+				
+
+				_mm_store_si128((__m128i*)(this->agents_array->waypoint_ptr + i), _mm_blendv_epi8(waypoint_ptr, _mm_set1_epi32(0), _mm_and_si128((__m128i)mask1, mask2)));
+				*/				
+				
 			}
 			}
 			break;
 
 			case IMPLEMENTATION::CUDA:
 			{
-				cuda_tick(this);
-
+				//float f;
+				//cuda_tick(this);
+				//std::cin >> f;
 			}
 			break;
 	}

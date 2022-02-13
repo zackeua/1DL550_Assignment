@@ -16,23 +16,33 @@ Ped::Cuagents::Cuagents(Ped::Tagents* agents_array) {
 	//static float *restrict mat_a __attribute__((aligned (XMM_ALIGNMENT_BYTES)));
 	cudaError_t cudaStatus;
 
+
     cudaMalloc((void**)&this->x, sizeof(float) * agents_array->agents.size());
     cudaMalloc((void**)&this->y, sizeof(float) * agents_array->agents.size());
-
-    cudaMalloc((void**)&this->dest_x, sizeof(float) * agents_array->agents.size());
-    cudaMalloc((void**)&this->dest_y, sizeof(float) * agents_array->agents.size());
-    cudaMalloc((void**)&this->dest_r, sizeof(float) * agents_array->agents.size());
-
-
-    cudaMalloc((void**)&this->waypoint_ptr, sizeof(float) * agents_array->agents.size());
-    cudaMalloc((void**)&this->waypoint_len, sizeof(float) * agents_array->agents.size());
-	cudaMalloc((void**)&this->waypoint_offset, sizeof(int) * agents_array->agents.size());
 
 	cudaMemcpy(this->x, agents_array->x, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
 	cudaMemcpy(this->y, agents_array->y, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
 
+	
+	cudaMalloc((void**)&this->dest_x, sizeof(float) * agents_array->agents.size());
+    cudaMalloc((void**)&this->dest_y, sizeof(float) * agents_array->agents.size());
+    cudaMalloc((void**)&this->dest_r, sizeof(float) * agents_array->agents.size());
+
+	cudaMemcpy(this->dest_x, agents_array->dest_x, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
+	cudaMemcpy(this->dest_y, agents_array->dest_y, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
+	cudaMemcpy(this->dest_r, agents_array->dest_r, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
+
+
+	
+    cudaMalloc((void**)&this->waypoint_ptr, sizeof(float) * agents_array->agents.size());
+    cudaMalloc((void**)&this->waypoint_len, sizeof(float) * agents_array->agents.size());
+
 	cudaMemcpy(this->waypoint_ptr, agents_array->waypoint_ptr, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
 	cudaMemcpy(this->waypoint_len, agents_array->waypoint_len, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
+	cudaMalloc((void**)&this->waypoint_offset, sizeof(int) * agents_array->agents.size());
+
+	
+
 	
 
 	int* waypoint_offset = new int[agents_array->agents.size()+1];
