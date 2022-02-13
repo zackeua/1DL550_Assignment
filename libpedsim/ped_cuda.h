@@ -52,19 +52,18 @@ namespace Ped {
 		float* dest_y;
 		float* dest_r;
 		
-		float** waypoint_x;
-		float** waypoint_y;
-		float** waypoint_r;
+		float* waypoint_x;
+		float* waypoint_y;
+		float* waypoint_r;
 		int* waypoint_ptr;
 		int* waypoint_len;
+		int* waypoint_offset;
 		
 
 
 		// The agent's desired next position
 		float* desiredPositionX;
 		float* desiredPositionY;    
-
-        int size;
         
 	};
 }

@@ -45,7 +45,7 @@ void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads)
 {
 	// Convenience test: does CUDA work on this machine?
-	//cuda_test();
+	cuda_test();
 
 	// Set
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
@@ -65,9 +65,9 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	this->agents_array = new Tagents(agents);
 
 
-	if (implementation == IMPLEMENTATION::CUDA) {
-		this->cuda_array = Cuagents(agents_array);		
-	}
+	
+	this->cuda_array = Cuagents(agents_array);		
+	
 
 
 	// Sets the chosen implemenation. Standard in the given code is SEQ
