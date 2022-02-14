@@ -38,7 +38,7 @@ namespace Ped {
         
         void computeNextDesiredPosition(int i);
         
-        void free();
+        void free(Ped::Tagents* agents_array);
 
 		//std::vector<Ped::Tagent*> agents;
 

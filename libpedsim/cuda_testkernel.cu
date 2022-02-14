@@ -62,7 +62,7 @@ __global__ void cuda_func(int n, Ped::Cuagents* cuda_agents) {
 
 __global__ void cuda_func2(int n, float* x, float* y, float* dest_x, float* dest_y, float* dest_r, float* waypoint_x, float* waypoint_y, float* waypoint_r, int* waypoint_ptr, int* waypoint_len, int* waypoint_offset) {
 
-	for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += (blockIdx.x+1) * blockDim.x) {
+	for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
 		
 		double diffX = dest_x[i] - x[i];
 		double diffY = dest_y[i] - y[i];
@@ -104,8 +104,8 @@ void Ped::Model::cuda_tick(Ped::Model* model) {
 		return;
 	}
 
-	int number_of_blocks = 4;
-	int threads_per_block = 20;
+	int number_of_blocks = 100;
+	int threads_per_block = 100;
 	
 	//cuda_func <<<number_of_blocks, threads_per_block>>> (model->agents.size(), &model->cuda_array);
 	cuda_func2 <<<number_of_blocks, threads_per_block>>> (model->agents.size(), model->cuda_array.x, model->cuda_array.y, model->cuda_array.dest_x, model->cuda_array.dest_y, model->cuda_array.dest_r, model->cuda_array.waypoint_x, model->cuda_array.waypoint_y, model->cuda_array.waypoint_r, model->cuda_array.waypoint_ptr, model->cuda_array.waypoint_len, model->cuda_array.waypoint_offset);

@@ -39,7 +39,7 @@ Ped::Cuagents::Cuagents(Ped::Tagents* agents_array) {
 
 	cudaMemcpy(this->waypoint_ptr, agents_array->waypoint_ptr, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
 	cudaMemcpy(this->waypoint_len, agents_array->waypoint_len, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
-	cudaMalloc((void**)&this->waypoint_offset, sizeof(int) * agents_array->agents.size());
+	cudaMalloc((void**)&this->waypoint_offset, sizeof(int) * (agents_array->agents.size()+1));
 
 	
 
@@ -54,7 +54,7 @@ Ped::Cuagents::Cuagents(Ped::Tagents* agents_array) {
     }
 	tot_length = waypoint_offset[agents_array->agents.size()];
 	
-	cudaMemcpy(this->waypoint_offset, waypoint_offset, sizeof(int) * (tot_length + 1), cudaMemcpyHostToDevice);
+	cudaMemcpy(this->waypoint_offset, waypoint_offset, sizeof(int) * (tot_length), cudaMemcpyHostToDevice);
 	
 	cudaMalloc((void**)&this->waypoint_x, sizeof(float) * tot_length);
     cudaMalloc((void**)&this->waypoint_y, sizeof(float) * tot_length);
@@ -94,8 +94,10 @@ void Ped::Cuagents::computeNextDesiredPosition(int i) {
 
 
 }
+*/
 
-void Ped::Cuagents::free() {
+
+void Ped::Cuagents::free(Ped::Tagents* agents_array) {
 	cudaFree((void**)&this->x);
 	cudaFree((void**)&this->y);
 
@@ -103,7 +105,7 @@ void Ped::Cuagents::free() {
 	cudaFree((void**)&this->dest_y);
 	cudaFree((void**)&this->dest_r);
 	
-	for (int i = 0; i < this->size; i++) {
+	for (int i = 0; i < agents_array->agents.size(); i++) {
 
 		cudaFree((void**)&this->waypoint_x[i]);
 		cudaFree((void**)&this->waypoint_y[i]);
@@ -120,4 +122,3 @@ void Ped::Cuagents::free() {
 
 }
 
-*/
