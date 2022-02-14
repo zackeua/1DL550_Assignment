@@ -51,7 +51,7 @@ int main(int argc, char*argv[]) {
 			}
 			else if (strcmp(&argv[i][2], "help") == 0)
 			{
-				cout << "Usage: " << argv[0] << " [--help] [--timing-mode] [--threads X (number of threads)] [-impl implementation (SEQ, OMP, PTHREAD)] [scenario]" << endl;
+				cout << "Usage: " << argv[0] << " [--help] [--timing-mode] [--threads X (number of threads)] [-impl implementation (SEQ, OMP, PTHREAD, VECTOR, CUDA, SEQ1, SEQ2)] [scenario]" << endl;
 				return 0;
 			}
 			else if (strcmp(&argv[i][2], "threads") == 0) {
@@ -87,10 +87,19 @@ int main(int argc, char*argv[]) {
 					implementation_to_test = Ped::CUDA;
 					std::cout << "Implementation: CUDA" << std::endl;
 				}
+				else if (strcmp(argv[i], "SEQ1") == 0)
+				{
+					implementation_to_test = Ped::SEQ1;
+					std::cout << "Implementation: SEQ1" << std::endl;
+				}
+				else if (strcmp(argv[i], "SEQ2") == 0)
+				{
+					implementation_to_test = Ped::SEQ;
+					std::cout << "Implementation: SEQ2" << std::endl;
+				}
 				else {
 					implementation_to_test = Ped::SEQ;
 					std::cout << "Fallback implementation: SEQ" << std::endl;
-
 				}
 			}
 			else

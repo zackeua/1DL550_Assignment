@@ -77,8 +77,15 @@ void Ped::Model::tick()
 {
 	// Choosing the implementation
 	switch (this->implementation) {
-		case IMPLEMENTATION::SEQ: // The sequential implementation
-			int pleb;
+		case IMPLEMENTATION::SEQ1: // The initial sequential implementation
+			for (int i = 0; i < agents.size(); i++) {
+				agents[i]->computeNextDesiredPosition();
+				agents[i]->setX(agents[i]->getDesiredX());
+				agents[i]->setY(agents[i]->getDesiredY());
+			}
+			break;
+			
+		case IMPLEMENTATION::SEQ: // The refactored sequential implementation
 			for (int i = 0; i < agents.size(); i++)
 				agents_array->computeNextDesiredPosition(i);
 				
