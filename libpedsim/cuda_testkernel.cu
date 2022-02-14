@@ -3,87 +3,101 @@
 
 #include <stdio.h>
 #include "ped_agents.h"
-#include "ped_waypoint.h"
+#include "ped_agent.h"
+#include "ped_cuda.h"
+#include "ped_model.h"
 
 cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size);
 
-__global__ void addKernel(int *c, const int *a, const int *b)
-{
+__global__ void addKernel(int *c, const int *a, const int *b) {
 	int i = threadIdx.x;
 	c[i] = a[i] + b[i];
 }
 
+__global__ void cuda_func(int n, float* x, float* y, float* dest_x, float* dest_y, float* dest_r, float* waypoint_x, float* waypoint_y, float* waypoint_r, int* waypoint_ptr, int* waypoint_len, int* waypoint_offset) {
 
-__global__ void print_func() {
-	printf("Hello world from thread %d\n", 
-	blockIdx.x * blockDim.x + threadIdx.x);
-}
-
-void hello()
-{
-	print_func <<<2, 10>>> ();
-}
-
-__global__ void cuda_func(int n, Ped::Tagents* agents_array) {
-	int index = threadIdx.x;
-	int stride = blockDim.x;
-
-	for (int i = index; i < n; i += stride) {
-		bool agentReachedDestination = false;
-
-		if (agents_array->destination[i] != NULL) {
-			double diffX = agents_array->dest_x[i] - agents_array->x[i];
-			double diffY = agents_array->dest_y[i] - agents_array->y[i];
-			double length = sqrt(diffX * diffX + diffY * diffY);
-			agentReachedDestination = length < agents_array->dest_r[i];
-		}
-
-		if (agentReachedDestination || agents_array->destination[i] == NULL) {
-			agents_array->dest_x[i] = agents_array->waypoint_x[i][agents_array->waypoint_ptr[i]];
-			agents_array->dest_y[i] = agents_array->waypoint_y[i][agents_array->waypoint_ptr[i]];
-			agents_array->dest_r[i] = agents_array->waypoint_r[i][agents_array->waypoint_ptr[i]];
-			
-			agents_array->waypoint_ptr[i] += 1;
-			if (agents_array->waypoint_ptr[i] == agents_array->waypoint_len[i])
-				agents_array->waypoint_ptr[i] = 0;
-		}
-
-		agents_array->destination[i] = agents_array->agentReachedDestination[i] || agents_array->destination[i] == NULL ? \
-						  			   agents_array->waypoints[i]->front() : agents_array->destination[i];
-
-		if (agents_array->destination[i] == NULL) { return; }
+	// Running the simulation, starting with the current thread in the block, and then jumping to that block in the next grid
+	for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < n; i += blockDim.x * gridDim.x) {
 		
-		// Safe to print here
-		double diffX = agents_array->dest_x[i] - agents_array->x[i];
-		double diffY = agents_array->dest_y[i] - agents_array->y[i];
+		// Computing the lengths to the destinations
+		double diffX = dest_x[i] - x[i];
+		double diffY = dest_y[i] - y[i];
 		double len = sqrt(diffX * diffX + diffY * diffY);
-		agents_array->x[i] = (int)round(agents_array->x[i] + diffX / len);
-		agents_array->y[i] = (int)round(agents_array->y[i] + diffY / len);
+
+		// Calculating the new x and y positions, and storing them in the x and y arrays
+		x[i] = (int)round(x[i] + diffX / len);
+		y[i] = (int)round(y[i] + diffY / len);
+
+		// Compute the new lengths to the destinations
+		diffX = dest_x[i] - x[i];
+		diffY = dest_y[i] - y[i];
+		len = sqrt(diffX * diffX + diffY * diffY);
+		
+		// Determining if each agent has reached its destination, and if so, updating its destination and the waypoint pointer
+		if (len < dest_r[i]) {
+			dest_x[i] = waypoint_x[waypoint_offset[i] + waypoint_ptr[i]];
+			dest_y[i] = waypoint_y[waypoint_offset[i] + waypoint_ptr[i]];
+			dest_r[i] = waypoint_r[waypoint_offset[i] + waypoint_ptr[i]];
+
+			waypoint_ptr[i] += 1;
+			if (waypoint_ptr[i] == waypoint_len[i])
+				waypoint_ptr[i] = 0;
+		}
+
 	}
 }
 
-int cuda_tick(Ped::Tagents* agents) {
-	Ped::Tagents* cuda_agents;
+void Ped::Model::cuda_tick(Ped::Model* model) {
+	// Allocating the CUDA status
 	cudaError_t cudaStatus;
+
+	// Setting the CUDA device
 	cudaStatus = cudaSetDevice(0);
-	cudaStatus = cudaMallocManaged((void**)&cuda_agents, sizeof(agents));
+
+	// Checking if that worked
 	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "addWithCuda failed!\n");
-		return 1;
+		fprintf(stderr, "cudaSetDevice failed!\n");
+		return;
 	}
 
-	int number_of_blocks = 1;
-	int threads_per_block = 1;
-	cuda_func <<<number_of_blocks, threads_per_block>>> (cuda_agents->agents.size(), cuda_agents);
-
+	// Setting the number of threads
+	int number_of_blocks = 100;
+	int threads_per_block = 100;
+	
+	// Running the CUDA implementatin on the GPU
+	cuda_func <<<number_of_blocks, threads_per_block>>> (model->agents.size(), model->cuda_array.x, model->cuda_array.y, model->cuda_array.dest_x, model->cuda_array.dest_y, model->cuda_array.dest_r, model->cuda_array.waypoint_x, model->cuda_array.waypoint_y, model->cuda_array.waypoint_r, model->cuda_array.waypoint_ptr, model->cuda_array.waypoint_len, model->cuda_array.waypoint_offset);
+	
+	// Synchronizing the threads
 	cudaStatus = cudaDeviceSynchronize();
-	cudaFree(cuda_agents);
+	
+	// Copying back the results for the x value back to the processor
+	cudaStatus = cudaMemcpy(model->agents_array->x, model->cuda_array.x, model->agents.size() * sizeof(float), cudaMemcpyDeviceToHost);
+	
+	// Checking if that worked
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "%d\n", cudaStatus);
+		fprintf(stderr, "cudaMemcpy1 failed!\n");
+		return;
+	}
+	
+	// Copying back the results for the x value back to the processor
+	cudaStatus = cudaMemcpy(model->agents_array->y, model->cuda_array.y, model->agents.size() * sizeof(float), cudaMemcpyDeviceToHost);
+	
+	// Checking if that worked
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaMemcpy failed!\n");
+		return;
+	}
 
-	return 0;
+	// Setting the new x and y coordinates in the graphics component
+	for (int i = 0; i < model->agents.size(); i++) {
+		model->agents[i]->setX(model->agents_array->x[i]);
+		model->agents[i]->setY(model->agents_array->y[i]);
+	}
 }
 
-int cuda_test()
-{
+// Verifying that CUDA works on this machine
+int cuda_test() {
     static int tested = 0;
 
 	const int arraySize = 5;
@@ -117,8 +131,7 @@ int cuda_test()
 }
 
 // Helper function for using CUDA to add vectors in parallel.
-cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
-{
+cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size) {
 	int *dev_a = 0;
 	int *dev_b = 0;
 	int *dev_c = 0;
@@ -172,10 +185,8 @@ cudaError_t addWithCuda(int *c, const int *a, const int *b, unsigned int size)
 	if (cudaStatus != cudaSuccess) {
 		fprintf(stderr, "addKernel launch failed: %s\n", cudaGetErrorString(cudaStatus));
 		goto Error;
-	}
-	else
-	{
-		//fprintf(stderr, "Cuda launch succeeded! \n");
+	} else {
+		// fprintf(stderr, "Cuda launch succeeded! \n");
 	}
 
 	// cudaDeviceSynchronize waits for the kernel to finish, and returns
@@ -197,10 +208,10 @@ Error:
 	cudaFree(dev_c);
 	cudaFree(dev_a);
 	cudaFree(dev_b);
-	if (cudaStatus != 0){
+
+	if (cudaStatus != 0) {
 		fprintf(stderr, "Cuda does not seem to be working properly.\n"); // This is not a good thing
-	}
-	else{
+	} else {
 		fprintf(stderr, "Cuda functionality test succeeded.\n"); // This is a good thing
 	}
 

@@ -66,9 +66,7 @@ namespace Ped {
 
 		// The agent's desired next position
 		int desiredPositionX;
-		int desiredPositionY;
-
-		
+		int desiredPositionY;		
 
 		// Internal init function 
 		void init(int posX, int posY);

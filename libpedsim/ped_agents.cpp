@@ -14,90 +14,78 @@
 #include <iostream>
 
 Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
-	//static float *restrict mat_a __attribute__((aligned (XMM_ALIGNMENT_BYTES)));
-
+	
 	this->agents = agents;
 
+	// Setting the agent coordinates and the destination coordinates, and acceptance radius
     this->x = new float[agents.size()];// __attribute__((aligned(32)))
     this->y = new float[agents.size()];// __attribute__((aligned(32)))
 	this->dest_x = new float[agents.size()];// __attribute__((aligned(32)))
     this->dest_y = new float[agents.size()];// __attribute__((aligned(32)))
 	this->dest_r = new float[agents.size()];// __attribute__((aligned(32)))
 
-    this->destination = new Twaypoint*[agents.size()];
-    this->lastDestination = new Twaypoint*[agents.size()];
+	// Allocating the waypoints, as they will be copied to the respective waypoint coordinate arrays
     this->waypoints = new deque<Twaypoint*>*[agents.size()];
-	this->agentReachedDestination = new bool[agents.size()];
 
+	// Allocating the waypoint coordinate and acceptance radius arrays
 	this->waypoint_x = new float*[agents.size()];
 	this->waypoint_y = new float*[agents.size()];
 	this->waypoint_r = new float*[agents.size()];
 
+	// Allocating the waypoint pointer which keeps track of which the next waypoint is for each agent
 	this->waypoint_ptr = new int[agents.size()];
 	this->waypoint_len = new int[agents.size()];
 	
+	// Filling the agent coordiantes, allocating the waypoints in the waypoint arrays, filling them, and filling the first destinations from thre.
 	for (int i = 0; i < agents.size(); i++) {
         this->x[i] = (float)agents[i]->getX();
         this->y[i] = (float)agents[i]->getY();
 		
-		this->destination[i] = agents[i]->destination;
 		this->waypoints[i] = &(agents[i]->waypoints);
-		this->lastDestination[i] = agents[i]->lastDestination;
-		this->agentReachedDestination[i] = false;
 
-		this->waypoint_x[i] = new float[this->waypoints[i]->size()];
-		this->waypoint_y[i] = new float[this->waypoints[i]->size()];
-		this->waypoint_r[i] = new float[this->waypoints[i]->size()];
+		this->waypoint_x[i] = new float[agents[i]->waypoints.size()];
+		this->waypoint_y[i] = new float[agents[i]->waypoints.size()];
+		this->waypoint_r[i] = new float[agents[i]->waypoints.size()];
 		this->waypoint_ptr[i] = 0;
-		this->waypoint_len[i] = this->waypoints[i]->size();
+		this->waypoint_len[i] = agents[i]->waypoints.size();
 
-		for (int j = 0; j < this->waypoints[i]->size(); j++) {
-			this->waypoint_x[i][j] = this->waypoints[i]->at(j)->getx();
-			this->waypoint_y[i][j] = this->waypoints[i]->at(j)->gety();
-			this->waypoint_r[i][j] = this->waypoints[i]->at(j)->getr();
+		for (int j = 0; j < agents[i]->waypoints.size(); j++) {
+			this->waypoint_x[i][j] = agents[i]->waypoints.at(j)->getx();
+			this->waypoint_y[i][j] = agents[i]->waypoints.at(j)->gety();
+			this->waypoint_r[i][j] = agents[i]->waypoints.at(j)->getr();
 		}
+
+		// We do this in order to ensure that the next destination never is null, since that only and always happens in the first timestep
+		this->dest_x[i] = this->waypoint_x[i][this->waypoint_ptr[i]];
+		this->dest_y[i] = this->waypoint_y[i][this->waypoint_ptr[i]];
+		this->dest_r[i] = this->waypoint_r[i][this->waypoint_ptr[i]];
+		this->waypoint_ptr[i] = 1;
     }
 }
 
 void Ped::Tagents::computeNextDesiredPosition(int i) {
-	updateDestination(i);
-	this->destination[i] = this->agentReachedDestination || this->destination[i] == NULL ?\
-						   this->waypoints[i]->front() : this->destination[i];
-	
-	if (this->destination[i] == NULL) {
-		// no destination, no need to
-		// compute where to move to
-		return;
-	}
-	// Safe to print here
-
+	// Computing the difference from the current location and the destination coordinatewise
 	double diffX = dest_x[i] - this->x[i];
 	double diffY = dest_y[i] - this->y[i];
 
+	// Computing the length to the destination based on the coordinatewise differences
 	double len = sqrt(diffX * diffX + diffY * diffY);
 	
+	// Updating the new position from the differnces in x and y divided by the length
 	this->x[i] = (int)round(this->x[i] + diffX / len);
 	this->y[i] = (int)round(this->y[i] + diffY / len);
 
+	// Updating the agents to reflect these changes in the graphics
 	this->agents[i]->setX(x[i]);
 	this->agents[i]->setY(y[i]);
-}
 
-void Ped::Tagents::updateDestination(int i) {
-	// This might help when vectorizing:
-	// https://stackoverflow.com/questions/38006616/how-to-use-if-condition-in-intrinsics
-	// https://community.intel.com/t5/Intel-C-Compiler/use-of-if-else-statement-in-sse2-intrinsics/td-p/816362
+	// Computing the new distance to the destination to check if we are there yet
+	diffX = dest_x[i] - this->x[i];
+	diffY = dest_y[i] - this->y[i];
+	len = sqrt(diffX * diffX + diffY * diffY);
 
-	// If the destination isn't null, then compute if the agent reached its destination and add it to the end of the deque.
-	if (this->destination[i] != NULL) {
-		double diffX = dest_x[i] - this->x[i];
-		double diffY = dest_y[i] - this->y[i];
-		double length = sqrt(diffX * diffX + diffY * diffY);
-		this->agentReachedDestination[i] = length < this->dest_r[i];
-	}
-
-	// If the destination is null, or if the agent has reached its destination, then we compute its new destination coordinates.
-	if (this->destination[i] == NULL || this->agentReachedDestination[i]) {
+	// Making the comparison to see if we need to get the next waypoint
+	if (len < this->dest_r[i]) {
 		this->dest_x[i] = this->waypoint_x[i][this->waypoint_ptr[i]];
 		this->dest_y[i] = this->waypoint_y[i][this->waypoint_ptr[i]];
 		this->dest_r[i] = this->waypoint_r[i][this->waypoint_ptr[i]];

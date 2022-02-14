@@ -17,6 +17,7 @@
 
 #include "ped_agent.h"
 #include "ped_agents.h"
+#include "ped_cuda.h"
 
 namespace Ped{
 	class Tagent;
@@ -51,24 +52,32 @@ namespace Ped{
 
 	private:
 
-		// Thread tick function, moves Tagent between id low and high
+		// The thread tick function for C++ Threads, which moves Tagent between ID low and high
 		static void thread_tick(Ped::Model* model, int thread_id);
-
-		int num_threads;
 	
+		// The tick function for the CUDA implementation
+		static void cuda_tick(Ped::Model* model);
+
+		// The agents in this scenario
+		std::vector<Tagent*> agents;
+	
+		// The destinations in this scenario
+		std::vector<Twaypoint*> destinations;
+
+		// The agents array for the general refactored code
+		Tagents* agents_array;
+		
+		// The agents array for the CUDA implementation
+		Cuagents cuda_array;
+
 		// Denotes which implementation (sequential, parallel implementations..)
 		// should be used for calculating the desired positions of
 		// agents (Assignment 1)
 		IMPLEMENTATION implementation;
 
-		// The agents in this scenario
-		std::vector<Tagent*> agents;
-
-		Tagents* agents_array;
-
-		// The waypoints in this scenario
-		std::vector<Twaypoint*> destinations;
-
+		// The number of threads used
+		int num_threads;
+	
 		// Moves an agent towards its next position
 		void move(Ped::Tagent *agent);
 

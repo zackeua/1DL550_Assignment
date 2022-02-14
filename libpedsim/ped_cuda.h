@@ -13,49 +13,46 @@
 // is handled in ped_model.cpp. 
 //
 
-#ifndef _ped_agents_h_
-#define _ped_agents_h_ 1
+#ifndef _ped_cuagents_h_
+#define _ped_cuagents_h_ 1
 
-#include <vector>
-#include <deque>
+#include "ped_agents.h"
+#include "ped_agent.h"
 
 using namespace std;
 
 namespace Ped {
 	class Twaypoint;
     class Tagent;
+    class Tagents;
 
-	class Tagents {
+	class Cuagents {
 	public:
-		// The constructor
-		Tagents(std::vector<Ped::Tagent*> agents);
-	
-		// The function computing and setting the new destination and location
+        Cuagents() {};
+		Cuagents(Ped::Tagents* agents_array);
+		
+		// Computing 
         void computeNextDesiredPosition(int i);
 
-		// The vector of the agents
-		std::vector<Ped::Tagent*> agents;
+		// Freeing the allocated memory
+        void free(Ped::Tagents* agents_array);
 
-		// The agent's current position
+		// The agents' current positions
 		float* x;
 		float* y;
 
-		// The agent's destination
+		// The agents' destinations and the acceptance radius
 		float* dest_x;
 		float* dest_y;
 		float* dest_r;
 		
-		// The new coordinatewise waypoint arrays in order to avoid using the deque
-		float** waypoint_x;
-		float** waypoint_y;
-		float** waypoint_r;
+		// The waypoint coordindates, its pointers, lengths, and offsets
+		float* waypoint_x;
+		float* waypoint_y;
+		float* waypoint_r;
 		int* waypoint_ptr;
 		int* waypoint_len;
-
-		// The queue of all destinations that this agent still has to visit
-		deque<Twaypoint*>** waypoints;
-	private:
-		Tagents() {};  
+		int* waypoint_offset;
 	};
 }
 

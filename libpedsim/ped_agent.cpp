@@ -12,6 +12,8 @@
 #include <stdlib.h>
 #include <iostream>
 
+// This file is kept the same since we refactored the code away from it
+
 Ped::Tagent::Tagent(int posX, int posY) {
 	Ped::Tagent::init(posX, posY);
 }
@@ -51,24 +53,22 @@ Ped::Twaypoint* Ped::Tagent::getNextDestination() {
 	bool agentReachedDestination = false;
 
 	if (destination != NULL) {
-		// compute if agent reached its current destination
+		// Compute if agent reached its current destination
 		double diffX = destination->getx() - x;
 		double diffY = destination->gety() - y;
 		double length = sqrt(diffX * diffX + diffY * diffY);
 		agentReachedDestination = length < destination->getr();
-		//std::cout << " " << x << std::endl;
-		//std::cout << " " << y << std::endl;
 	}
 
 	if ((agentReachedDestination || destination == NULL) && !waypoints.empty()) {
-		// Case 1: agent has reached destination (or has no current destination);
+		// Case 1: Agent has reached destination (or has no current destination);
 		// get next destination if available
 		waypoints.push_back(destination);
 		nextDestination = waypoints.front();
 		waypoints.pop_front();
 	}
 	else {
-		// Case 2: agent has not yet reached destination, continue to move towards
+		// Case 2: Agent has not yet reached destination, continue to move towards
 		// current destination
 		nextDestination = destination;
 	}
