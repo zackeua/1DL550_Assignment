@@ -33,13 +33,19 @@ namespace Ped {
 		// The function computing and setting the new destination and location
         void computeNextDesiredPosition(int i);
 
+        void computeNextDesiredPositionMove(int i);
+
+		void reachedDestination(int i);
+
 		// The vector of the agents
 		std::vector<Ped::Tagent*> agents;
 
 		// The agent's current position
 		float* x;
 		float* y;
-
+		float* desiredX;
+		float* desiredY;
+		
 		// The agent's destination
 		float* dest_x;
 		float* dest_y;

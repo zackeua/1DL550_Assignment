@@ -33,6 +33,10 @@ namespace Ped {
 		int getDesiredX() const { return desiredPositionX; }
 		int getDesiredY() const { return desiredPositionY; }
 
+		// Returns the coordinates of the desired position
+		void setDesiredX(int desiredX) { desiredPositionX = desiredX; }
+		void setDesiredY(int desiredY) { desiredPositionY = desiredY; }
+
 		// Sets the agent's position
 		void setX(int newX) { x = newX; }
 		void setY(int newY) { y = newY; }
@@ -57,16 +61,16 @@ namespace Ped {
 		// The queue of all destinations that this agent still has to visit
 		deque<Twaypoint*> waypoints;
 
+		// The agent's desired next position
+		int desiredPositionX;
+		int desiredPositionY;
+		
 	private:
 		Tagent() {};
 
 		// The agent's current position
 		int x;
 		int y;
-
-		// The agent's desired next position
-		int desiredPositionX;
-		int desiredPositionY;		
 
 		// Internal init function 
 		void init(int posX, int posY);

@@ -20,6 +20,8 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
 	// Setting the agent coordinates and the destination coordinates, and acceptance radius
     this->x = new float[agents.size()];// __attribute__((aligned(32)))
     this->y = new float[agents.size()];// __attribute__((aligned(32)))
+	this->desiredX = new float[agents.size()];// __attribute__((aligned(32)))
+    this->desiredY = new float[agents.size()];// __attribute__((aligned(32)))
 	this->dest_x = new float[agents.size()];// __attribute__((aligned(32)))
     this->dest_y = new float[agents.size()];// __attribute__((aligned(32)))
 	this->dest_r = new float[agents.size()];// __attribute__((aligned(32)))
@@ -63,6 +65,8 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
     }
 }
 
+///////////////////////////////////////////////////////////////////////////
+
 void Ped::Tagents::computeNextDesiredPosition(int i) {
 	// Computing the difference from the current location and the destination coordinatewise
 	double diffX = dest_x[i] - this->x[i];
@@ -83,6 +87,46 @@ void Ped::Tagents::computeNextDesiredPosition(int i) {
 	diffX = dest_x[i] - this->x[i];
 	diffY = dest_y[i] - this->y[i];
 	len = sqrt(diffX * diffX + diffY * diffY);
+
+	// Making the comparison to see if we need to get the next waypoint
+	if (len < this->dest_r[i]) {
+		this->dest_x[i] = this->waypoint_x[i][this->waypoint_ptr[i]];
+		this->dest_y[i] = this->waypoint_y[i][this->waypoint_ptr[i]];
+		this->dest_r[i] = this->waypoint_r[i][this->waypoint_ptr[i]];
+
+		this->waypoint_ptr[i] += 1;
+		if (this->waypoint_ptr[i] == this->waypoint_len[i])
+			this->waypoint_ptr[i] = 0;
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////
+
+void Ped::Tagents::computeNextDesiredPositionMove(int i) {
+	// Computing the difference from the current location and the destination coordinatewise
+	double diffX = dest_x[i] - this->x[i];
+	double diffY = dest_y[i] - this->y[i];
+
+	// Computing the length to the destination based on the coordinatewise differences
+	double len = sqrt(diffX * diffX + diffY * diffY);
+	
+	// Updating the new position from the differnces in x and y divided by the length
+	this->desiredX[i] = (int)round(this->x[i] + diffX / len);
+	this->desiredY[i] = (int)round(this->y[i] + diffY / len);
+
+	// Updating the agents to reflect these changes in the graphics
+	this->agents[i]->setDesiredX(desiredX[i]);
+	this->agents[i]->setDesiredY(desiredY[i]);
+
+	this->agents[i]->desiredPositionX = desiredX[i];
+	this->agents[i]->desiredPositionY = desiredY[i];
+}
+
+void Ped::Tagents::reachedDestination(int i) {
+	// Computing the new distance to the destination to check if we are there yet
+	float diffX = dest_x[i] - this->x[i];
+	float diffY = dest_y[i] - this->y[i];
+	float len = sqrt(diffX * diffX + diffY * diffY);
 
 	// Making the comparison to see if we need to get the next waypoint
 	if (len < this->dest_r[i]) {

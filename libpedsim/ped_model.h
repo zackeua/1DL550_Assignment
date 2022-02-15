@@ -24,7 +24,7 @@ namespace Ped{
 
 	// The implementation modes for Assignment 1 + 2:
 	// chooses which implementation to use for tick()
-	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ, SEQ1 };
+	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ, SEQ1, MOVE_AGENT_SEQ, MOVE_AGENTS_OMP_LOCK, MOVE_AGENTS_OMP_CAS };
 
 	class Model
 	{
@@ -80,6 +80,12 @@ namespace Ped{
 	
 		// Moves an agent towards its next position
 		void move(Ped::Tagent *agent);
+
+		// Moves an agent towards its next position
+		void moveLock(Ped::Tagent *agent);
+
+		// Moves an agent towards its next position
+		void moveCAS(Ped::Tagent *agent);
 
 		////////////
 		/// Everything below here won't be relevant until Assignment 3

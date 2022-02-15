@@ -97,6 +97,21 @@ int main(int argc, char*argv[]) {
 					implementation_to_test = Ped::SEQ;
 					std::cout << "Implementation: SEQ2" << std::endl;
 				}
+				else if (strcmp(argv[i], "MOVE_AGENT_SEQ") == 0)
+				{
+					implementation_to_test = Ped::MOVE_AGENT_SEQ;
+					std::cout << "Implementation: MOVE_AGENT_SEQ" << std::endl;
+				}
+				else if (strcmp(argv[i], "MOVE_AGENTS_OMP_LOCK") == 0)
+				{
+					implementation_to_test = Ped::MOVE_AGENTS_OMP_LOCK;
+					std::cout << "Implementation: MOVE_AGENTS_OMP_LOCK" << std::endl;
+				}
+				else if (strcmp(argv[i], "MOVE_AGENTS_OMP_CAS") == 0)
+				{
+					implementation_to_test = Ped::MOVE_AGENTS_OMP_CAS;
+					std::cout << "Fallback implementation: MOVE_AGENTS_OMP_CAS" << std::endl;
+				}
 				else {
 					implementation_to_test = Ped::SEQ;
 					std::cout << "Fallback implementation: SEQ" << std::endl;

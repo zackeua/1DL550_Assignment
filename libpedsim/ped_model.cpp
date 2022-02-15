@@ -56,7 +56,6 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 			destinations.push_back(destinations[0]);
 		}
 	}
-
 	// Allocating the agents array for the general refactored code
 	this->agents_array = new Tagents(agents);
 	
@@ -82,6 +81,7 @@ void Ped::Model::tick()
 				agents[i]->computeNextDesiredPosition();
 				agents[i]->setX(agents[i]->getDesiredX());
 				agents[i]->setY(agents[i]->getDesiredY());
+				
 			}
 			break;
 			
@@ -204,8 +204,193 @@ void Ped::Model::tick()
 			cuda_tick(this);
 		}
 		break;
+		
+		case IMPLEMENTATION::MOVE_AGENT_SEQ: // The initial sequential implementation with collision handling
+			for (int i = 0; i < agents.size(); i++) { // This implementation is done
+				agents[i]->computeNextDesiredPosition();
+				move(agents[i]);
+			}
+
+			break;
+
+		case IMPLEMENTATION::MOVE_AGENTS_OMP_LOCK: // The aligned sequential implementation  with collision handling
+			for (int i = 0; i < agents.size(); i++) {
+				agents_array->reachedDestination(i);
+				agents_array->computeNextDesiredPositionMove(i);
+				moveLock(agents[i]);
+			}
+
+			break;
+
+		case IMPLEMENTATION::MOVE_AGENTS_OMP_CAS: // The aligned OpenMP sequential implementation with collision handling
+			for (int i = 0; i < agents.size(); i++) {
+				agents_array->computeNextDesiredPositionMove(i);
+				agents_array->reachedDestination(i);
+				moveCAS(agents[i]);
+			}
+
+			break;
 	}
 }
+
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+
+
+// Moves the agent to the next desired position. If already taken, it will
+// be moved to a location close to it.
+void Ped::Model::moveLock(Ped::Tagent *agent)
+{
+	//? Should we keep everything as agent objects?
+	// Search for neighboring agents
+	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
+
+	// Retrieve their positions
+	std::vector<std::pair<int, int> > takenPositions;
+	for (std::set<const Ped::Tagent*>::iterator neighborIt = neighbors.begin(); neighborIt != neighbors.end(); ++neighborIt) {
+		std::pair<int, int> position((*neighborIt)->getX(), (*neighborIt)->getY());
+		takenPositions.push_back(position);
+	}
+
+	// Questions:
+	// 1. What are we doing wrong here?
+	// 2. How do we make each task know which agents it owns?
+	// 3. How do we make each task know which region it governs?
+	// 4. How do we update the size and the number of regions automatically?
+	// 5. Why does the parallelization on slide 26 run twice?
+
+	// From lecture 6 slide 26:
+	// #pragma omp parallel
+	// {
+	// 	#pragma omp single
+	// 	{
+	// 		#pragma omp task
+	// 			Region 1
+	// 		#pragma omp task
+	// 			Region 2
+	// 		#pragma omp task
+	// 			Region 3
+	// 		#pragma omp task
+	// 			Region 4
+	// 	}
+	// }
+
+	// Sketch of the allocation logic based on the geometry
+	// if (x < a) {
+	// 	if (y < b)
+	// 		Put agent in Task 1
+	// 	else
+	// 		Put agent in Task 2
+	// }
+	// else {
+	// 	if (y < a)
+	// 		Put agent in Task 3
+	// 	else
+	// 		Put agent in Task 4
+	// }
+
+
+
+	// Compute the three alternative positions that would bring the agent
+	// closer to his desiredPosition, starting with the desiredPosition itself
+	std::vector<std::pair<int, int> > prioritizedAlternatives;
+	std::pair<int, int> pDesired(agent->getDesiredX(), agent->getDesiredY());
+	prioritizedAlternatives.push_back(pDesired);
+
+	int diffX = pDesired.first - agent->getX();
+	int diffY = pDesired.second - agent->getY();
+	std::pair<int, int> p1, p2;
+	if (diffX == 0 || diffY == 0)
+	{
+		// Agent wants to walk straight to North, South, West or East
+		p1 = std::make_pair(pDesired.first + diffY, pDesired.second + diffX);
+		p2 = std::make_pair(pDesired.first - diffY, pDesired.second - diffX);
+	}
+	else {
+		// Agent wants to walk diagonally
+		p1 = std::make_pair(pDesired.first, agent->getY());
+		p2 = std::make_pair(agent->getX(), pDesired.second);
+	}
+	prioritizedAlternatives.push_back(p1);
+	prioritizedAlternatives.push_back(p2);
+
+	// Find the first empty alternative position
+	for (std::vector<pair<int, int> >::iterator it = prioritizedAlternatives.begin(); it != prioritizedAlternatives.end(); ++it) {
+
+		// If the current position is not yet taken by any neighbor
+		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
+
+			// Set the agent's position 
+			agent->setX((*it).first);
+			agent->setY((*it).second);
+
+			break;
+		}
+	}
+}
+
+
+// Moves the agent to the next desired position. If already taken, it will
+// be moved to a location close to it.
+void Ped::Model::moveCAS(Ped::Tagent *agent)
+{
+	//? Should we keep everything as agent objects?
+	// Search for neighboring agents
+	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
+
+	// Retrieve their positions
+	std::vector<std::pair<int, int> > takenPositions;
+	for (std::set<const Ped::Tagent*>::iterator neighborIt = neighbors.begin(); neighborIt != neighbors.end(); ++neighborIt) {
+		std::pair<int, int> position((*neighborIt)->getX(), (*neighborIt)->getY());
+		takenPositions.push_back(position);
+	}
+
+	// Compute the three alternative positions that would bring the agent
+	// closer to his desiredPosition, starting with the desiredPosition itself
+	std::vector<std::pair<int, int> > prioritizedAlternatives;
+	std::pair<int, int> pDesired(agent->getDesiredX(), agent->getDesiredY());
+	prioritizedAlternatives.push_back(pDesired);
+
+	int diffX = pDesired.first - agent->getX();
+	int diffY = pDesired.second - agent->getY();
+	std::pair<int, int> p1, p2;
+	if (diffX == 0 || diffY == 0)
+	{
+		// Agent wants to walk straight to North, South, West or East
+		p1 = std::make_pair(pDesired.first + diffY, pDesired.second + diffX);
+		p2 = std::make_pair(pDesired.first - diffY, pDesired.second - diffX);
+	}
+	else {
+		// Agent wants to walk diagonally
+		p1 = std::make_pair(pDesired.first, agent->getY());
+		p2 = std::make_pair(agent->getX(), pDesired.second);
+	}
+	prioritizedAlternatives.push_back(p1);
+	prioritizedAlternatives.push_back(p2);
+
+	// Find the first empty alternative position
+	for (std::vector<pair<int, int> >::iterator it = prioritizedAlternatives.begin(); it != prioritizedAlternatives.end(); ++it) {
+
+		// If the current position is not yet taken by any neighbor
+		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
+
+			// Set the agent's position 
+			agent->setX((*it).first);
+			agent->setY((*it).second);
+
+			break;
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+
 
 ////////////
 /// Everything below here relevant for Assignment 3.
@@ -216,6 +401,7 @@ void Ped::Model::tick()
 // be moved to a location close to it.
 void Ped::Model::move(Ped::Tagent *agent)
 {
+	//? Should we keep everything as agent objects?
 	// Search for neighboring agents
 	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
 
@@ -272,7 +458,7 @@ void Ped::Model::move(Ped::Tagent *agent)
 /// \param   y the y coordinate
 /// \param   dist the distance around x/y that will be searched for agents (search field is a square in the current implementation)
 set<const Ped::Tagent*> Ped::Model::getNeighbors(int x, int y, int dist) const {
-
+	// TODO: Don't include all agents as your neighbors.
 	// create the output list
 	// ( It would be better to include only the agents close by, but this programmer is lazy.)	
 	return set<const Ped::Tagent*>(agents.begin(), agents.end());
