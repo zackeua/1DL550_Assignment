@@ -97,6 +97,7 @@ int main(int argc, char*argv[]) {
 					implementation_to_test = Ped::SEQ;
 					std::cout << "Implementation: SEQ2" << std::endl;
 				}
+<<<<<<< Updated upstream
 				else if (strcmp(argv[i], "MOVE_AGENT_SEQ") == 0)
 				{
 					implementation_to_test = Ped::MOVE_AGENT_SEQ;
@@ -111,6 +112,22 @@ int main(int argc, char*argv[]) {
 				{
 					implementation_to_test = Ped::MOVE_AGENTS_OMP_CAS;
 					std::cout << "Fallback implementation: MOVE_AGENTS_OMP_CAS" << std::endl;
+=======
+				else if (strcmp(argv[i], "MOVE_SEQ") == 0)
+				{
+					implementation_to_test = Ped::MOVE_SEQ;
+					std::cout << "Implementation: MOVE_SEQ" << std::endl;
+				}
+				else if (strcmp(argv[i], "MOVE_LOCK") == 0)
+				{
+					implementation_to_test = Ped::MOVE_LOCK;
+					std::cout << "Implementation: MOVE_LOCK" << std::endl;
+				}
+				else if (strcmp(argv[i], "MOVE_CAS") == 0)
+				{
+					implementation_to_test = Ped::MOVE_CAS;
+					std::cout << "Fallback implementation: MOVE_CAS" << std::endl;
+>>>>>>> Stashed changes
 				}
 				else {
 					implementation_to_test = Ped::SEQ;

@@ -16,6 +16,10 @@
 Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
 	
 	this->agents = agents;
+<<<<<<< Updated upstream
+=======
+	
+>>>>>>> Stashed changes
 
 	// Setting the agent coordinates and the destination coordinates, and acceptance radius
     this->x = new float[agents.size()];// __attribute__((aligned(32)))
@@ -103,6 +107,13 @@ void Ped::Tagents::computeNextDesiredPosition(int i) {
 ///////////////////////////////////////////////////////////////////////////
 
 void Ped::Tagents::computeNextDesiredPositionMove(int i) {
+<<<<<<< Updated upstream
+=======
+	// After moving the agents, fetch back the changes
+	this->x[i] = this->agents[i]->getX();
+	this->y[i] = this->agents[i]->getY();
+	
+>>>>>>> Stashed changes
 	// Computing the difference from the current location and the destination coordinatewise
 	double diffX = dest_x[i] - this->x[i];
 	double diffY = dest_y[i] - this->y[i];
@@ -123,10 +134,13 @@ void Ped::Tagents::computeNextDesiredPositionMove(int i) {
 }
 
 void Ped::Tagents::reachedDestination(int i) {
+<<<<<<< Updated upstream
 	// After moving the agents, fetch back the changes
 	this->x[i] = this->agents[i]->getX();
 	this->y[i] = this->agents[i]->getY();
 
+=======
+>>>>>>> Stashed changes
 	// Computing the new distance to the destination to check if we are there yet
 	float diffX = dest_x[i] - this->x[i];
 	float diffY = dest_y[i] - this->y[i];

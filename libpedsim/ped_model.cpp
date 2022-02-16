@@ -68,6 +68,12 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Setting the number of threads
 	this->num_threads = num_threads;
 
+<<<<<<< Updated upstream
+=======
+	// The lock variables
+	omp_init_lock(&lock);
+
+>>>>>>> Stashed changes
 	// Setting up the heatmap (Relevant for Assignment 4)
 	setupHeatmapSeq();
 }
@@ -205,7 +211,11 @@ void Ped::Model::tick()
 		}
 		break;
 		
+<<<<<<< Updated upstream
 		case IMPLEMENTATION::MOVE_AGENT_SEQ: // The initial sequential implementation with collision handling
+=======
+		case IMPLEMENTATION::MOVE_SEQ: // The initial sequential implementation with collision handling
+>>>>>>> Stashed changes
 			for (int i = 0; i < agents.size(); i++) { // This implementation is done
 				agents[i]->computeNextDesiredPosition();
 				move(agents[i]);
@@ -213,6 +223,7 @@ void Ped::Model::tick()
 
 			break;
 
+<<<<<<< Updated upstream
 		case IMPLEMENTATION::MOVE_AGENTS_OMP_LOCK: // The aligned sequential implementation  with collision handling
 			for (int i = 0; i < agents.size(); i++) {
 				agents_array->computeNextDesiredPositionMove(i);
@@ -223,6 +234,9 @@ void Ped::Model::tick()
 			break;
 
 		case IMPLEMENTATION::MOVE_AGENTS_OMP_CAS: // The aligned OpenMP sequential implementation with collision handling
+=======
+		case IMPLEMENTATION::MOVE_CAS: // The aligned OpenMP sequential implementation with collision handling
+>>>>>>> Stashed changes
 			for (int i = 0; i < agents.size(); i++) {
 				agents_array->computeNextDesiredPositionMove(i);
 				moveCAS(agents[i]);
@@ -230,6 +244,7 @@ void Ped::Model::tick()
 			}
 
 			break;
+<<<<<<< Updated upstream
 	}
 }
 
@@ -381,12 +396,184 @@ void Ped::Model::moveCAS(Ped::Tagent *agent)
 
 			break;
 		}
+=======
+
+		case IMPLEMENTATION::MOVE_LOCK: // The aligned sequential implementation  with collision handling
+			omp_set_num_threads(this->num_threads);
+
+			// Parallelizing the loop using static scheduling.
+			#pragma omp parallel
+			#pragma omp single
+			{	
+				for (int i = 0; i < agents.size(); i++) {
+
+					if (this->agents_array->x[i] < 400) { // x = 800
+						if (this->agents_array->y[i] < 300) { // y = 600
+							#pragma omp task
+							{
+								agents_array->computeNextDesiredPositionMove(i);
+								moveLock(agents[i]);
+								agents_array->reachedDestination(i);
+							}
+						} else {
+							#pragma omp task
+							{
+								agents_array->computeNextDesiredPositionMove(i);
+								moveLock(agents[i]);
+								agents_array->reachedDestination(i);
+							}
+						}
+					} else {
+						if (this->agents_array->y[i] < 300) {
+							#pragma omp task
+							{
+								agents_array->computeNextDesiredPositionMove(i);
+								moveLock(agents[i]);
+								agents_array->reachedDestination(i);
+							}
+						} else {
+							#pragma omp task
+							{
+								agents_array->computeNextDesiredPositionMove(i);
+								moveLock(agents[i]);
+								agents_array->reachedDestination(i);
+							}
+						}
+					}
+				}
+			}
+			break;
+>>>>>>> Stashed changes
 	}
 }
 
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
+<<<<<<< Updated upstream
+=======
+
+
+// Moves the agent to the next desired position. If already taken, it will
+// be moved to a location close to it.
+void Ped::Model::moveLock(Ped::Tagent *agent)
+{
+	//? Should we keep everything as agent objects?
+	// Search for neighboring agents
+	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
+
+	// Retrieve their positions
+	std::vector<std::pair<int, int> > takenPositions;
+	for (std::set<const Ped::Tagent*>::iterator neighborIt = neighbors.begin(); neighborIt != neighbors.end(); ++neighborIt) {
+		std::pair<int, int> position((*neighborIt)->getX(), (*neighborIt)->getY());
+		takenPositions.push_back(position);
+	}
+
+	// Questions:
+	// 1. How do we make each task know which agents it owns?
+	// 2. How do we make each task know which region it governs?
+	// 3. How do we update the size and the number of regions automatically?
+
+	// Compute the three alternative positions that would bring the agent
+	// closer to his desiredPosition, starting with the desiredPosition itself
+	std::vector<std::pair<int, int> > prioritizedAlternatives;
+	std::pair<int, int> pDesired(agent->getDesiredX(), agent->getDesiredY());
+	prioritizedAlternatives.push_back(pDesired);
+
+	int diffX = pDesired.first - agent->getX();
+	int diffY = pDesired.second - agent->getY();
+	std::pair<int, int> p1, p2;
+	if (diffX == 0 || diffY == 0)
+	{
+		// Agent wants to walk straight to North, South, West or East
+		p1 = std::make_pair(pDesired.first + diffY, pDesired.second + diffX);
+		p2 = std::make_pair(pDesired.first - diffY, pDesired.second - diffX);
+	}
+	else {
+		// Agent wants to walk diagonally
+		p1 = std::make_pair(pDesired.first, agent->getY());
+		p2 = std::make_pair(agent->getX(), pDesired.second);
+	}
+	prioritizedAlternatives.push_back(p1);
+	prioritizedAlternatives.push_back(p2);
+
+	// Find the first empty alternative position
+	#pragma omp critical
+	{
+		for (std::vector<pair<int, int> >::iterator it = prioritizedAlternatives.begin(); it != prioritizedAlternatives.end(); ++it) {
+			
+			// TODO: Lock this while parallelizing this
+			// If the current position is not yet taken by any neighbor
+			if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
+				// omp_set_lock(&(this->lock));
+				// Set the agent's position 
+				agent->setX((*it).first);
+				agent->setY((*it).second);
+				// omp_unset_lock(&(this->lock));
+				break;
+			}
+		}
+	}
+}
+
+
+// Moves the agent to the next desired position. If already taken, it will
+// be moved to a location close to it.
+void Ped::Model::moveCAS(Ped::Tagent *agent)
+{
+	//? Should we keep everything as agent objects?
+	// Search for neighboring agents
+	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
+
+	// Retrieve their positions
+	std::vector<std::pair<int, int> > takenPositions;
+	for (std::set<const Ped::Tagent*>::iterator neighborIt = neighbors.begin(); neighborIt != neighbors.end(); ++neighborIt) {
+		std::pair<int, int> position((*neighborIt)->getX(), (*neighborIt)->getY());
+		takenPositions.push_back(position);
+	}
+
+	// Compute the three alternative positions that would bring the agent
+	// closer to his desiredPosition, starting with the desiredPosition itself
+	std::vector<std::pair<int, int> > prioritizedAlternatives;
+	std::pair<int, int> pDesired(agent->getDesiredX(), agent->getDesiredY());
+	prioritizedAlternatives.push_back(pDesired);
+
+	int diffX = pDesired.first - agent->getX();
+	int diffY = pDesired.second - agent->getY();
+	std::pair<int, int> p1, p2;
+	if (diffX == 0 || diffY == 0)
+	{
+		// Agent wants to walk straight to North, South, West or East
+		p1 = std::make_pair(pDesired.first + diffY, pDesired.second + diffX);
+		p2 = std::make_pair(pDesired.first - diffY, pDesired.second - diffX);
+	}
+	else {
+		// Agent wants to walk diagonally
+		p1 = std::make_pair(pDesired.first, agent->getY());
+		p2 = std::make_pair(agent->getX(), pDesired.second);
+	}
+	prioritizedAlternatives.push_back(p1);
+	prioritizedAlternatives.push_back(p2);
+
+	// Find the first empty alternative position
+	for (std::vector<pair<int, int> >::iterator it = prioritizedAlternatives.begin(); it != prioritizedAlternatives.end(); ++it) {
+
+		// If the current position is not yet taken by any neighbor
+		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
+
+			// Set the agent's position 
+			agent->setX((*it).first);
+			agent->setY((*it).second);
+
+			break;
+		}
+	}
+}
+
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+///////////////////////////////////////////////////////////////////////////
+>>>>>>> Stashed changes
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////

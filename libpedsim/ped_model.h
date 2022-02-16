@@ -14,6 +14,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <omp.h>
 
 #include "ped_agent.h"
 #include "ped_agents.h"
@@ -24,7 +25,11 @@ namespace Ped{
 
 	// The implementation modes for Assignment 1 + 2:
 	// chooses which implementation to use for tick()
+<<<<<<< Updated upstream
 	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ, SEQ1, MOVE_AGENT_SEQ, MOVE_AGENTS_OMP_LOCK, MOVE_AGENTS_OMP_CAS };
+=======
+	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ, SEQ1, MOVE_SEQ, MOVE_LOCK, MOVE_CAS };
+>>>>>>> Stashed changes
 
 	class Model
 	{
@@ -77,9 +82,21 @@ namespace Ped{
 
 		// The number of threads used
 		int num_threads;
+<<<<<<< Updated upstream
 	
 		// Moves an agent towards its next position
 		void move(Ped::Tagent *agent);
+
+		// Moves an agent towards its next position
+		void moveLock(Ped::Tagent *agent);
+=======
+>>>>>>> Stashed changes
+
+		// The lock variables
+		omp_lock_t lock;
+	
+		// Moves an agent towards its next position
+		void moveCAS(Ped::Tagent *agent);
 
 		// Moves an agent towards its next position
 		void moveLock(Ped::Tagent *agent);
