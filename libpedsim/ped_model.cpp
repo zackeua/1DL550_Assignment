@@ -215,9 +215,9 @@ void Ped::Model::tick()
 
 		case IMPLEMENTATION::MOVE_AGENTS_OMP_LOCK: // The aligned sequential implementation  with collision handling
 			for (int i = 0; i < agents.size(); i++) {
-				agents_array->reachedDestination(i);
 				agents_array->computeNextDesiredPositionMove(i);
 				moveLock(agents[i]);
+				agents_array->reachedDestination(i);
 			}
 
 			break;
@@ -225,8 +225,8 @@ void Ped::Model::tick()
 		case IMPLEMENTATION::MOVE_AGENTS_OMP_CAS: // The aligned OpenMP sequential implementation with collision handling
 			for (int i = 0; i < agents.size(); i++) {
 				agents_array->computeNextDesiredPositionMove(i);
-				agents_array->reachedDestination(i);
 				moveCAS(agents[i]);
+				agents_array->reachedDestination(i);
 			}
 
 			break;
@@ -254,7 +254,7 @@ void Ped::Model::moveLock(Ped::Tagent *agent)
 	}
 
 	// Questions:
-	// 1. What are we doing wrong here?
+	// 1. Adapt the code to the array-of-coordinates setting
 	// 2. How do we make each task know which agents it owns?
 	// 3. How do we make each task know which region it governs?
 	// 4. How do we update the size and the number of regions automatically?

@@ -123,6 +123,10 @@ void Ped::Tagents::computeNextDesiredPositionMove(int i) {
 }
 
 void Ped::Tagents::reachedDestination(int i) {
+	// After moving the agents, fetch back the changes
+	this->x[i] = this->agents[i]->getX();
+	this->y[i] = this->agents[i]->getY();
+
 	// Computing the new distance to the destination to check if we are there yet
 	float diffX = dest_x[i] - this->x[i];
 	float diffY = dest_y[i] - this->y[i];
