@@ -75,10 +75,10 @@ namespace Ped{
 		Cuagents cuda_array;
 
 		std::deque<Region> regions;
-		// vector<Region> regions;
+
+		int time;
 
 		void moveAgentsInRegion(int i);
-		void moveAgentsInRegionAdaptive(int i);
 		std::pair<Region, Region> splitRegion(Region r);
 		Ped::Region mergeRegions(Region r1, Region r2);
 
@@ -100,10 +100,7 @@ namespace Ped{
 		void move(Ped::Tagent *agent);
 
 		// Moves an agent towards its next position
-		bool moveLock(Ped::Tagent *agent, int i);
-
-		// Moves an agent towards its next position
-		bool moveCAS(Ped::Tagent *agent, int i);
+		bool moveParallel(Ped::Tagent *agent, int i);
 
 		void addAgentToRegion(int i);
 
@@ -112,7 +109,7 @@ namespace Ped{
 		///////////////////////////////////////////////
 
 		// Returns the set of neighboring agents for the specified position
-		set<const Ped::Tagent*> getNeighbors(int x, int y, int dist) const;
+		set<const Ped::Tagent*> getNeighbors(int x, int y, double dist) const;
 
 		////////////
 		/// Everything below here won't be relevant until Assignment 4
