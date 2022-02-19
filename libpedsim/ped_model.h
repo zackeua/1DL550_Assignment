@@ -33,7 +33,7 @@ namespace Ped{
 	public:
 
 		// Sets everything up
-		void setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads);
+		void setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads, double split_factor, double merge_factor);
 		
 		// Coordinates a time step in the scenario: move all agents by one step (if applicable).
 		void tick();
@@ -82,6 +82,9 @@ namespace Ped{
 		std::pair<Region, Region> splitRegion(Region r);
 		Ped::Region mergeRegions(Region r1, Region r2);
 
+		double split_factor;
+		double merge_factor;
+
 		// Index of agent to move between regions
 		deque<int> agent_queue;
 
@@ -92,9 +95,6 @@ namespace Ped{
 
 		// The number of threads used
 		int num_threads;
-
-		// The lock variables
-		omp_lock_t lock;
 	
 		// Moves an agent towards its next position
 		void move(Ped::Tagent *agent);

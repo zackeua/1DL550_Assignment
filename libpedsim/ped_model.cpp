@@ -40,10 +40,10 @@ void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
 		model->agents_array->computeNextDesiredPosition(i);
 }
 
-void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads)
+void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads, double split_factor, double merge_factor)
 {
 	// Testing if CUDA works on this machine
-	cuda_test();
+	// cuda_test();
 
 	// Setting up the agents in this scenario
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
@@ -70,35 +70,25 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Setting the number of threads
 	this->num_threads = num_threads;
 
-	std::cout << &this->regions << std::endl;
+	this->split_factor = split_factor;
+	this->merge_factor = merge_factor;
+
 	for (int i = 0; i < this->num_threads; i++) {
 		Region r = Region(0, 0);
 		r.setLowerBound(160/this->num_threads * i);
 		r.setUpperBound(160/this->num_threads * (i+1));
-		std::cout << r.getLowerBound() << " " << r.getUpperBound() << std::endl;
 		this->regions.push_back(r);
 	}
 	this->regions[this->num_threads-1].setUpperBound(160);
 
 	for (int i = 0; i < agents.size(); i++) {
 		for (int j = 0; j < this->num_threads; j++) {
-			//std::cout << r.getLowerBound() << " " << r.getUpperBound() << std::endl;
 
 			if (this->regions[j].getLowerBound() <= agents[i]->getX() && agents[i]->getX() < this->regions[j].getUpperBound()) {
 				this->regions[j].addAgent(i);
 			}
 		}
 	}
-	std::cout << this->agents.size() << std::endl;
-	for (int i = 0; i < this->num_threads; i++) {
-		std::cout << this->regions[i].getAgents().size() << std::endl;
-	}
-	/*
-	int i;
-	std::cin >> i;
-	*/
-	// The lock variables
-	omp_init_lock(&lock);
 
 	// Setting up the heatmap (Relevant for Assignment 4)
 	setupHeatmapSeq();
@@ -239,8 +229,7 @@ void Ped::Model::tick()
 		
 		case IMPLEMENTATION::MOVE_SEQ: // The initial sequential implementation with collision handling
 			{
-				int k;
-			  std::cin >> k;
+			
 			for (int i = 0; i < agents.size(); i++) { // This implementation is done
 				agents[i]->computeNextDesiredPosition();
 				move(agents[i]);
@@ -250,9 +239,7 @@ void Ped::Model::tick()
 			break;
 
 		case IMPLEMENTATION::MOVE_CONSTANT: // The aligned sequential implementation  with collision handling
-			 {
-			  int k;
-			  std::cin >> k;
+			{
 			omp_set_num_threads(this->num_threads);
 			// Parallelizing the loop using static scheduling.
 			#pragma omp parallel
@@ -308,14 +295,19 @@ void Ped::Model::tick()
 		case IMPLEMENTATION::MOVE_ADAPTIVE: // The aligned OpenMP sequential implementation with collision handling
 			{
 			omp_set_num_threads(this->num_threads);
-			
-			int k;
-			std::cin >> k;
-			for (int i = 0; i < this->regions.size(); i++) {
-				printf("Lowerbound [R%i]: %i\nUpperbound [R%i]: %i\nAgents [R%i]: %i\n", i, this->regions[i].getLowerBound(),
-																						   i, this->regions[i].getUpperBound(),
-																						   i, this->regions[i].getAgents().size());
-			}
+			// int k;
+			// std::cin >> k;
+
+			double split_threshold = this->split_factor * min(this->agents.size() / this->regions.size(), this->agents.size() / this->num_threads);
+			double merge_threshold = this->merge_factor * max(this->agents.size() / this->regions.size(), this->agents.size() / this->num_threads);
+
+			// for (int i = 0; i < this->regions.size(); i++) {
+			// 	printf("Lowerbound [R%i]: %i\nUpperbound [R%i]: %i\nAgents [R%i]: %i\n", i, this->regions[i].getLowerBound(),
+			// 																			   i, this->regions[i].getUpperBound(),
+			// 																			   i, this->regions[i].getAgents().size());
+			// }
+
+			// printf("Split threshold: %.1f\nMerge threshold: %.1f\n", split_threshold, merge_threshold);
 
 			#pragma omp parallel
 			#pragma omp single
@@ -342,11 +334,6 @@ void Ped::Model::tick()
 
 			}
 
-			int split_threshold = 2 * this->agents.size() / this->regions.size();
-			int merge_threshold = 0.2 * this->agents.size() / this->regions.size();
-
-			//! There is a slight risk that the split and merge every time.
-
 			// Splitting regions
 			std::deque<Ped::Region> queue;
 			while (!this->regions.empty()) {
@@ -361,24 +348,10 @@ void Ped::Model::tick()
 				}
 			}
 
-			// Copying over the split regions
-			// while (!queue.empty()) {
-			// 	this->regions.push_back(queue.front());
-			// 	queue.pop_front();
-			// }
-			
-
 			// Merging regions
 			while (!queue.empty()) {
 				Region t = queue.front();
 				queue.pop_front();
-
-				// if (!queue.empty() && queue.front().getAgents().size() + t.getAgents().size() < split_threshold) {
-				// 	this->regions.push_back(mergeRegions(t, queue.front()));
-				// 	queue.pop_front();
-				// } else {
-				// 	this->regions.push_back(t);
-				// }
 
 				if (!queue.empty() && queue.front().getAgents().size() + t.getAgents().size() < split_threshold &&
 					(queue.front().getAgents().size() < merge_threshold || t.getAgents().size() < merge_threshold)) {
@@ -388,23 +361,16 @@ void Ped::Model::tick()
 					this->regions.push_back(t);
 				}
 			}
-
-			// split and merge adjacent regions
-			//{			
-			// split all regions over some upper threshold
-
-			// merge adjacent regions if they by themself are below lower threshold but dont exceed upper threshold together
-			//}
-
+	
 			// print position if two agents are there
-			for (int i = 0; i < agents.size(); i++) {
-				for (int j = 0; j < i; j++)
-				{
-					if (agents[i]->getX() == agents[j]->getX() && agents[i]->getY() == agents[j]->getY())
-						std::cout << agents[i]->getX() << " " << agents[i]->getY() << std::endl;
-				}
+			// for (int i = 0; i < agents.size(); i++) {
+			// 	for (int j = 0; j < i; j++)
+			// 	{
+			// 		if (agents[i]->getX() == agents[j]->getX() && agents[i]->getY() == agents[j]->getY())
+			// 			std::cout << agents[i]->getX() << " " << agents[i]->getY() << std::endl;
+			// 	}
 				
-			}
+			// }
 		}
 		break;
 		
@@ -531,10 +497,9 @@ bool Ped::Model::moveLock(Ped::Tagent *agent, int i)
 	prioritizedAlternatives.push_back(p2);
 
 	// Find the first empty alternative position
-	int off = 3;
+	int off = 2;
 		for (std::vector<pair<int, int> >::iterator it = prioritizedAlternatives.begin(); it != prioritizedAlternatives.end(); ++it) {
 			
-			// TODO: Lock this while parallelizing this
 			// If the current position is not yet taken by any neighbor
 			if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {				
 				// Set the agent's position
@@ -597,7 +562,7 @@ bool Ped::Model::moveCAS(Ped::Tagent *agent, int i)
 	prioritizedAlternatives.push_back(p1);
 	prioritizedAlternatives.push_back(p2);
 
-	int off = 3;
+	int off = 2;
 	// Find the first empty alternative position
 	for (std::vector<pair<int, int> >::iterator it = prioritizedAlternatives.begin(); it != prioritizedAlternatives.end(); ++it) {
 
