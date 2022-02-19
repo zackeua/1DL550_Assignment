@@ -102,15 +102,15 @@ int main(int argc, char*argv[]) {
 					implementation_to_test = Ped::MOVE_SEQ;
 					std::cout << "Implementation: MOVE_SEQ" << std::endl;
 				}
-				else if (strcmp(argv[i], "MOVE_LOCK") == 0)
+				else if (strcmp(argv[i], "MOVE_CONSTANT") == 0)
 				{
-					implementation_to_test = Ped::MOVE_LOCK;
-					std::cout << "Implementation: MOVE_LOCK" << std::endl;
+					implementation_to_test = Ped::MOVE_CONSTANT;
+					std::cout << "Implementation: MOVE_CONSTANT" << std::endl;
 				}
-				else if (strcmp(argv[i], "MOVE_CAS") == 0)
+				else if (strcmp(argv[i], "MOVE_ADAPTIVE") == 0)
 				{
-					implementation_to_test = Ped::MOVE_CAS;
-					std::cout << "Fallback implementation: MOVE_CAS" << std::endl;
+					implementation_to_test = Ped::MOVE_ADAPTIVE;
+					std::cout << "Implementation: MOVE_ADAPTIVE" << std::endl;
 				}
 				else {
 					implementation_to_test = Ped::SEQ;

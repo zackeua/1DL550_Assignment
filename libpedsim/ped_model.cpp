@@ -249,54 +249,7 @@ void Ped::Model::tick()
 			}
 			break;
 
-		case IMPLEMENTATION::MOVE_CAS: // The aligned OpenMP sequential implementation with collision handling
-			omp_set_num_threads(this->num_threads);
-
-			#pragma omp parallel
-			#pragma omp single
-			{
-			for (int i = 0; i < this->regions.size(); i++) {
-				#pragma omp task
-				{
-				this->moveAgentsInRegionCAS(i);
-				}
-			}
-			}
-			
-			while (!this->agent_queue.empty())
-			{
-				int agent_index = this->agent_queue.front();
-				this->agent_queue.pop_front();
-				
-				agents_array->computeNextDesiredPositionMove(agent_index); 
-				move(agents[agent_index]);
-				agents_array->reachedDestination(agent_index);
-				
-				// add the agent back to a region
-				this->addAgentToRegion(agent_index);
-
-			}
-
-			// split and merge adjacent regions
-			//{			
-			// split all regions over some upper threshold
-
-			// merge adjacent regions if they by themself are below lower threshold but dont exceed upper threshold together
-			//}
-
-			// print position if two agents are there
-			for (int i = 0; i < agents.size(); i++) {
-				for (int j = 0; j < i; j++)
-				{
-					if (agents[i]->getX() == agents[j]->getX() && agents[i]->getY() == agents[j]->getY())
-						std::cout << agents[i]->getX() << " " << agents[i]->getY() << std::endl;
-				}
-				
-			}
-
-			break;
-
-		case IMPLEMENTATION::MOVE_LOCK: // The aligned sequential implementation  with collision handling
+		case IMPLEMENTATION::MOVE_CONSTANT: // The aligned sequential implementation  with collision handling
 			 {
 			  int k;
 			  std::cin >> k;
@@ -351,6 +304,110 @@ void Ped::Model::tick()
 			
 			 }
 			break;
+			
+		case IMPLEMENTATION::MOVE_ADAPTIVE: // The aligned OpenMP sequential implementation with collision handling
+			{
+			omp_set_num_threads(this->num_threads);
+			
+			int k;
+			std::cin >> k;
+			for (int i = 0; i < this->regions.size(); i++) {
+				printf("Lowerbound [R%i]: %i\nUpperbound [R%i]: %i\nAgents [R%i]: %i\n", i, this->regions[i].getLowerBound(),
+																						   i, this->regions[i].getUpperBound(),
+																						   i, this->regions[i].getAgents().size());
+			}
+
+			#pragma omp parallel
+			#pragma omp single
+			{
+			for (int i = 0; i < this->regions.size(); i++) {
+				#pragma omp task
+				{
+				this->moveAgentsInRegionAdaptive(i);
+				}
+			}
+			}
+			
+			while (!this->agent_queue.empty())
+			{
+				int agent_index = this->agent_queue.front();
+				this->agent_queue.pop_front();
+				
+				agents_array->computeNextDesiredPositionMove(agent_index); 
+				move(agents[agent_index]);
+				agents_array->reachedDestination(agent_index);
+				
+				// add the agent back to a region
+				this->addAgentToRegion(agent_index);
+
+			}
+
+			int split_threshold = 2 * this->agents.size() / this->regions.size();
+			int merge_threshold = 0.2 * this->agents.size() / this->regions.size();
+
+			//! There is a slight risk that the split and merge every time.
+
+			// Splitting regions
+			std::deque<Ped::Region> queue;
+			while (!this->regions.empty()) {
+				if (this->regions.front().getAgents().size() > split_threshold) {
+					std::pair<Ped::Region, Ped::Region> r = this->splitRegion(this->regions.front());
+					queue.push_back(r.first);
+					queue.push_back(r.second);
+					this->regions.pop_front();
+				} else {
+					queue.push_back(this->regions.front());
+					this->regions.pop_front();
+				}
+			}
+
+			// Copying over the split regions
+			// while (!queue.empty()) {
+			// 	this->regions.push_back(queue.front());
+			// 	queue.pop_front();
+			// }
+			
+
+			// Merging regions
+			while (!queue.empty()) {
+				Region t = queue.front();
+				queue.pop_front();
+
+				// if (!queue.empty() && queue.front().getAgents().size() + t.getAgents().size() < split_threshold) {
+				// 	this->regions.push_back(mergeRegions(t, queue.front()));
+				// 	queue.pop_front();
+				// } else {
+				// 	this->regions.push_back(t);
+				// }
+
+				if (!queue.empty() && queue.front().getAgents().size() + t.getAgents().size() < split_threshold &&
+					(queue.front().getAgents().size() < merge_threshold || t.getAgents().size() < merge_threshold)) {
+					this->regions.push_back(mergeRegions(t, queue.front()));
+					queue.pop_front();
+				} else {
+					this->regions.push_back(t);
+				}
+			}
+
+			// split and merge adjacent regions
+			//{			
+			// split all regions over some upper threshold
+
+			// merge adjacent regions if they by themself are below lower threshold but dont exceed upper threshold together
+			//}
+
+			// print position if two agents are there
+			for (int i = 0; i < agents.size(); i++) {
+				for (int j = 0; j < i; j++)
+				{
+					if (agents[i]->getX() == agents[j]->getX() && agents[i]->getY() == agents[j]->getY())
+						std::cout << agents[i]->getX() << " " << agents[i]->getY() << std::endl;
+				}
+				
+			}
+		}
+		break;
+		
 	}
 }
 
@@ -372,8 +429,7 @@ void Ped::Model::moveAgentsInRegion(int i) {
 	}
 }
 
-
-void Ped::Model::moveAgentsInRegionCAS(int i) {
+void Ped::Model::moveAgentsInRegionAdaptive(int i) {
 	//std::cout << this->regions[i].getAgents().size() << std::endl;
 
 	for (int j = 0; j < this->regions.at(i).getAgents().size(); j++) {
@@ -386,8 +442,6 @@ void Ped::Model::moveAgentsInRegionCAS(int i) {
 		}
 	}
 }
-
-
 
 void Ped::Model::addAgentToRegion(int i) {
 	for (int j = 0; j < this->regions.size(); j++) {
@@ -402,6 +456,36 @@ void Ped::Model::addAgentToRegion(int i) {
 	//this->regions[this->regions.size()-1].addAgent(i);
 }
 
+std::pair<Ped::Region, Ped::Region> Ped::Model::splitRegion(Region r) {
+	Region r1 = Region(0, 0);
+	r1.setLowerBound(r.getLowerBound());
+	r1.setUpperBound((r.getLowerBound() + r.getUpperBound()) / 2);
+	Region r2 = Region(0, 0);
+	r2.setLowerBound((r.getLowerBound() + r.getUpperBound()) / 2);
+	r2.setUpperBound(r.getUpperBound());
+	
+	for (int i = 0; i < r.getAgents().size(); i++) {
+		if (this->agents_array->x[r.getAgents()[i]] < r1.getUpperBound())
+			r1.addAgent(r.getAgents()[i]);
+		else 
+			r2.addAgent(r.getAgents()[i]);
+	}
+
+	return std::pair<Ped::Region, Ped::Region>(r1, r2);
+}
+
+Ped::Region Ped::Model::mergeRegions(Region r1, Region r2) {
+	Region r = Region(0, 0);
+	r.setLowerBound(r1.getLowerBound());
+	r.setUpperBound(r2.getUpperBound());
+	
+	for (int i = 0; i < r1.getAgents().size(); i++)
+		r.addAgent(r1.getAgents()[i]);
+	for (int i = 0; i < r2.getAgents().size(); i++)
+		r.addAgent(r2.getAgents()[i]);
+
+	return r;
+}
 
 // Moves the agent to the next desired position. If already taken, it will
 // be moved to a location close to it.

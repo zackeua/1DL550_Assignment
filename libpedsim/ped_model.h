@@ -26,7 +26,7 @@ namespace Ped{
 
 	// The implementation modes for Assignment 1 + 2:
 	// chooses which implementation to use for tick()
-	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ, SEQ1, MOVE_SEQ, MOVE_LOCK, MOVE_CAS };
+	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ, SEQ1, MOVE_SEQ, MOVE_CONSTANT, MOVE_ADAPTIVE };
 
 	class Model
 	{
@@ -37,6 +37,8 @@ namespace Ped{
 		
 		// Coordinates a time step in the scenario: move all agents by one step (if applicable).
 		void tick();
+
+		std::deque<Region> getRegions() const { return this->regions; };
 
 		// Returns the agents of this scenario
 		const std::vector<Tagent*> getAgents() const { return agents; };
@@ -72,11 +74,13 @@ namespace Ped{
 		// The agents array for the CUDA implementation
 		Cuagents cuda_array;
 
-
-		vector<Region> regions;
+		std::deque<Region> regions;
+		// vector<Region> regions;
 
 		void moveAgentsInRegion(int i);
-		void moveAgentsInRegionCAS(int i);
+		void moveAgentsInRegionAdaptive(int i);
+		std::pair<Region, Region> splitRegion(Region r);
+		Ped::Region mergeRegions(Region r1, Region r2);
 
 		// Index of agent to move between regions
 		deque<int> agent_queue;
