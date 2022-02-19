@@ -114,6 +114,7 @@ void Ped::Tagents::computeNextDesiredPositionMove(int i) {
 	double len = sqrt(diffX * diffX + diffY * diffY);
 	
 	// Updating the new position from the differnces in x and y divided by the length
+	
 	this->desiredX[i] = (int)round(this->x[i] + diffX / len);
 	this->desiredY[i] = (int)round(this->y[i] + diffY / len);
 

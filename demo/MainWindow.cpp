@@ -27,6 +27,9 @@ MainWindow::MainWindow(const Ped::Model &pedModel) : model(pedModel)
 	for (int x = 0; x <= 800; x += cellsizePixel)
 	{
 		scene->addLine(x, 0, x, 600, QPen(Qt::gray));
+		if (x == 200 || x == 400 || x == 600)
+			scene->addLine(x, 0, x, 600, QPen(Qt::blue));
+
 	}
 
 	// Now add the horizontal lines, paint them gray

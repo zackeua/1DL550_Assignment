@@ -9,7 +9,7 @@
 // possible.
 //
 #ifndef _ped_model_h_
-#define _ped_model_h_
+#define _ped_model_h_ 1
 
 #include <vector>
 #include <map>
@@ -19,6 +19,7 @@
 #include "ped_agent.h"
 #include "ped_agents.h"
 #include "ped_cuda.h"
+#include "ped_region.h"
 
 namespace Ped{
 	class Tagent;
@@ -71,6 +72,15 @@ namespace Ped{
 		// The agents array for the CUDA implementation
 		Cuagents cuda_array;
 
+
+		vector<Region> regions;
+
+		void moveAgentsInRegion(int i);
+		void moveAgentsInRegionCAS(int i);
+
+		// Index of agent to move between regions
+		deque<int> agent_queue;
+
 		// Denotes which implementation (sequential, parallel implementations..)
 		// should be used for calculating the desired positions of
 		// agents (Assignment 1)
@@ -86,10 +96,12 @@ namespace Ped{
 		void move(Ped::Tagent *agent);
 
 		// Moves an agent towards its next position
-		void moveLock(Ped::Tagent *agent);
+		bool moveLock(Ped::Tagent *agent, int i);
 
 		// Moves an agent towards its next position
-		void moveCAS(Ped::Tagent *agent);
+		bool moveCAS(Ped::Tagent *agent, int i);
+
+		void addAgentToRegion(int i);
 
 		////////////
 		/// Everything below here won't be relevant until Assignment 3

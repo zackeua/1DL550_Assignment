@@ -9,6 +9,8 @@
 #include "ped_waypoint.h"
 #include "ped_cuda.h"
 #include "ped_model.h"
+#include "ped_region.h"
+
 #include <iostream>
 #include <stdlib.h>
 #include <stack>
@@ -68,6 +70,33 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Setting the number of threads
 	this->num_threads = num_threads;
 
+	std::cout << &this->regions << std::endl;
+	for (int i = 0; i < this->num_threads; i++) {
+		Region r = Region(0, 0);
+		r.setLowerBound(160/this->num_threads * i);
+		r.setUpperBound(160/this->num_threads * (i+1));
+		std::cout << r.getLowerBound() << " " << r.getUpperBound() << std::endl;
+		this->regions.push_back(r);
+	}
+	this->regions[this->num_threads-1].setUpperBound(160);
+
+	for (int i = 0; i < agents.size(); i++) {
+		for (int j = 0; j < this->num_threads; j++) {
+			//std::cout << r.getLowerBound() << " " << r.getUpperBound() << std::endl;
+
+			if (this->regions[j].getLowerBound() <= agents[i]->getX() && agents[i]->getX() < this->regions[j].getUpperBound()) {
+				this->regions[j].addAgent(i);
+			}
+		}
+	}
+	std::cout << this->agents.size() << std::endl;
+	for (int i = 0; i < this->num_threads; i++) {
+		std::cout << this->regions[i].getAgents().size() << std::endl;
+	}
+	/*
+	int i;
+	std::cin >> i;
+	*/
 	// The lock variables
 	omp_init_lock(&lock);
 
@@ -209,62 +238,118 @@ void Ped::Model::tick()
 		break;
 		
 		case IMPLEMENTATION::MOVE_SEQ: // The initial sequential implementation with collision handling
+			{
+				int k;
+			  std::cin >> k;
 			for (int i = 0; i < agents.size(); i++) { // This implementation is done
 				agents[i]->computeNextDesiredPosition();
 				move(agents[i]);
 			}
 
+			}
 			break;
 
 		case IMPLEMENTATION::MOVE_CAS: // The aligned OpenMP sequential implementation with collision handling
+			omp_set_num_threads(this->num_threads);
+
+			#pragma omp parallel
+			#pragma omp single
+			{
+			for (int i = 0; i < this->regions.size(); i++) {
+				#pragma omp task
+				{
+				this->moveAgentsInRegionCAS(i);
+				}
+			}
+			}
+			
+			while (!this->agent_queue.empty())
+			{
+				int agent_index = this->agent_queue.front();
+				this->agent_queue.pop_front();
+				
+				agents_array->computeNextDesiredPositionMove(agent_index); 
+				move(agents[agent_index]);
+				agents_array->reachedDestination(agent_index);
+				
+				// add the agent back to a region
+				this->addAgentToRegion(agent_index);
+
+			}
+
+			// split and merge adjacent regions
+			//{			
+			// split all regions over some upper threshold
+
+			// merge adjacent regions if they by themself are below lower threshold but dont exceed upper threshold together
+			//}
+
+			// print position if two agents are there
 			for (int i = 0; i < agents.size(); i++) {
-				agents_array->computeNextDesiredPositionMove(i);
-				moveCAS(agents[i]);
-				agents_array->reachedDestination(i);
+				for (int j = 0; j < i; j++)
+				{
+					if (agents[i]->getX() == agents[j]->getX() && agents[i]->getY() == agents[j]->getY())
+						std::cout << agents[i]->getX() << " " << agents[i]->getY() << std::endl;
+				}
+				
 			}
 
 			break;
 
 		case IMPLEMENTATION::MOVE_LOCK: // The aligned sequential implementation  with collision handling
+			 {
+			  int k;
+			  std::cin >> k;
 			omp_set_num_threads(this->num_threads);
-
 			// Parallelizing the loop using static scheduling.
 			#pragma omp parallel
+			{
+
 			#pragma omp single
 			{	
-				for (int i = 0; i < agents.size(); i++) {
+				for (int i = 0; i < regions.size(); i++) {
 
-					if (this->agents_array->x[i] < 200) { // x = 800
-						#pragma omp task
-						{
-							agents_array->computeNextDesiredPositionMove(i);
-							moveLock(agents[i]);
-							agents_array->reachedDestination(i);
-						}
-					} else if (this->agents_array->x[i] < 400) {
-						#pragma omp task
-						{
-							agents_array->computeNextDesiredPositionMove(i);
-							moveLock(agents[i]);
-							agents_array->reachedDestination(i);
-						}
-					} else if (this->agents_array->x[i] < 600) {
-						#pragma omp task
-						{
-							agents_array->computeNextDesiredPositionMove(i);
-							moveLock(agents[i]);
-							agents_array->reachedDestination(i);
-						}
-					} else {
-						#pragma omp task
-						{
-							agents_array->computeNextDesiredPositionMove(i);
-							moveLock(agents[i]);
-							agents_array->reachedDestination(i);
-						}
-					}
+				#pragma omp task
+				{
+					this->moveAgentsInRegion(i);
+				}
 				}
 			}
+			}
+
+			for (int i = 0; i < agents.size(); i++) {
+				for (int j = 0; j < i; j++)
+				{
+					if (agents[i]->getX() == agents[j]->getX() && agents[i]->getY() == agents[j]->getY())
+						std::cout << agents[i]->getX() << " " << agents[i]->getY() << std::endl;
+				}
+				
+			}
+
+			
+
+			while (!this->agent_queue.empty())
+			{
+				int agent_index = this->agent_queue.front();
+				this->agent_queue.pop_front();
+				
+				agents_array->computeNextDesiredPositionMove(agent_index);
+				move(agents[agent_index]);
+				agents_array->reachedDestination(agent_index);
+				
+				// add the agent back to a region
+				if (agents_array->x[agent_index] <= 40) {
+					this->regions[0].addAgent(agent_index);
+				} else if (agents_array->x[agent_index] <= 80) {
+					this->regions[1].addAgent(agent_index);
+				} else if (agents_array->x[agent_index] <= 120) {
+					this->regions[2].addAgent(agent_index);
+				} else {
+					this->regions[3].addAgent(agent_index);
+				}
+			}
+			
+			 }
 			break;
 	}
 }
@@ -273,10 +358,54 @@ void Ped::Model::tick()
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
+void Ped::Model::moveAgentsInRegion(int i) {
+	//std::cout << this->regions[i].getAgents().size() << std::endl;
+
+	for (int j = 0; j < this->regions[i].getAgents().size(); j++) {
+		int agent_id = this->regions[i].getAgents()[j];
+		agents_array->computeNextDesiredPositionMove(agent_id);
+		if (moveLock(agents[agent_id], agent_id)) {
+			agents_array->reachedDestination(agent_id);
+		} else {
+			this->regions[i].removeAgent(agent_id);
+		}
+	}
+}
+
+
+void Ped::Model::moveAgentsInRegionCAS(int i) {
+	//std::cout << this->regions[i].getAgents().size() << std::endl;
+
+	for (int j = 0; j < this->regions.at(i).getAgents().size(); j++) {
+		int agent_id = this->regions.at(i).getAgents()[j];
+		agents_array->computeNextDesiredPositionMove(agent_id);
+		if (moveCAS(agents[agent_id], agent_id)) {
+			agents_array->reachedDestination(agent_id);
+		} else {
+			this->regions.at(i).removeAgent(agent_id);
+		}
+	}
+}
+
+
+
+void Ped::Model::addAgentToRegion(int i) {
+	for (int j = 0; j < this->regions.size(); j++) {
+		if (this->agents_array->x[i] <= this->regions.at(j).getUpperBound()) {
+			this->regions[j].addAgent(i);
+			return;
+		}
+	}
+
+	// just in case the if statement in the loop do not work
+	// requires the regions to be sorted from lower x to higher x values
+	//this->regions[this->regions.size()-1].addAgent(i);
+}
+
 
 // Moves the agent to the next desired position. If already taken, it will
 // be moved to a location close to it.
-void Ped::Model::moveLock(Ped::Tagent *agent)
+bool Ped::Model::moveLock(Ped::Tagent *agent, int i)
 {
 	//? Should we keep everything as agent objects?
 	// Search for neighboring agents
@@ -318,7 +447,7 @@ void Ped::Model::moveLock(Ped::Tagent *agent)
 	prioritizedAlternatives.push_back(p2);
 
 	// Find the first empty alternative position
-	
+	int off = 3;
 		for (std::vector<pair<int, int> >::iterator it = prioritizedAlternatives.begin(); it != prioritizedAlternatives.end(); ++it) {
 			
 			// TODO: Lock this while parallelizing this
@@ -326,40 +455,29 @@ void Ped::Model::moveLock(Ped::Tagent *agent)
 			if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {				
 				// Set the agent's position
 				// change to a list afterwards instead of omp critical
-				if (agent->getX() < 200 && 199 < (*it).first || 199 < agent->getX() && agent->getX() < 400 && (*it).first < 200) {					 
-					#pragma omp critical
-					{
-					agent->setX((*it).first);
-					agent->setY((*it).second);						
-					}
-				} else if (200 < agent->getX() && agent->getX() < 400 && 399 < (*it).first || 399 < agent->getX() && agent->getX() < 600 && (*it).first < 400) {
-					#pragma omp critical
-					{
-					agent->setX((*it).first);
-					agent->setY((*it).second);						
-					}
-				}
-				else if (400 < agent->getX() && agent->getX() < 600 && 599 < (*it).first || 599 < agent->getX() && (*it).first < 600) {
-					#pragma omp critical
-					{
-					agent->setX((*it).first);
-					agent->setY((*it).second);						
-					}
+				if (		0 <= agent->getX() && agent->getX() < 40 && 40-off <= (*it).first || 40 <= agent->getX() && agent->getX() < 80 && (*it).first < 40+off) {
+					this->agent_queue.push_back(i);
+					return false;
+				} else if (40 <= agent->getX() && agent->getX() < 80 && 80-off <= (*it).first || 80 <= agent->getX() && agent->getX() < 120 && (*it).first < 80+off) {	
+					this->agent_queue.push_back(i);
+					return false;
+				} else if (80 <= agent->getX() && agent->getX() < 120 && 120-off <= (*it).first || 120 <= agent->getX() && agent->getX() < 160 && (*it).first < 120+off) {
+					this->agent_queue.push_back(i);
+					return false;
 				} else {
 					agent->setX((*it).first);
 					agent->setY((*it).second);
-
+					return true;
 				}
-					break;
 			}
 		}
-	
+	return true;
 }
 
 
 // Moves the agent to the next desired position. If already taken, it will
 // be moved to a location close to it.
-void Ped::Model::moveCAS(Ped::Tagent *agent)
+bool Ped::Model::moveCAS(Ped::Tagent *agent, int i)
 {
 	//? Should we keep everything as agent objects?
 	// Search for neighboring agents
@@ -395,19 +513,34 @@ void Ped::Model::moveCAS(Ped::Tagent *agent)
 	prioritizedAlternatives.push_back(p1);
 	prioritizedAlternatives.push_back(p2);
 
+	int off = 3;
 	// Find the first empty alternative position
 	for (std::vector<pair<int, int> >::iterator it = prioritizedAlternatives.begin(); it != prioritizedAlternatives.end(); ++it) {
 
 		// If the current position is not yet taken by any neighbor
 		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
+			for (int j = 0; j < this->regions.size(); j++) {
+				if (j == 0 && agent->getX() < this->regions.at(j).getUpperBound() && this->regions.at(j).getUpperBound() - off <= (*it).first) {
+					this->agent_queue.push_back(i);
+					return false;
+				} else if (j == this->regions.size()-1 && this->regions.at(j).getLowerBound() <= agent->getX() && (*it).first <= this->regions.at(j).getLowerBound() + off) {
+					this->agent_queue.push_back(i);
+					return false;
+				} else if (this->regions.at(j).getLowerBound() <= agent->getX() && agent->getX() < this->regions.at(j).getUpperBound() && (this->regions.at(j).getUpperBound() - off <= (*it).first || (*it).first <= this->regions.at(j).getLowerBound() + off)) {
+					this->agent_queue.push_back(i);
+					return false;
+				}
+			}
 
 			// Set the agent's position 
 			agent->setX((*it).first);
 			agent->setY((*it).second);
-
-			break;
+			return true;
+			
 		}
 	}
+	return true;
+
 }
 
 ///////////////////////////////////////////////////////////////////////////
