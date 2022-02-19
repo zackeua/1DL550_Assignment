@@ -74,17 +74,6 @@ namespace Ped{
 		// The agents array for the CUDA implementation
 		Cuagents cuda_array;
 
-		std::deque<Region> regions;
-
-		int time;
-
-		void moveAgentsInRegion(int i);
-		std::pair<Region, Region> splitRegion(Region r);
-		Ped::Region mergeRegions(Region r1, Region r2);
-
-		double split_factor;
-		double merge_factor;
-
 		// Index of agent to move between regions
 		deque<int> agent_queue;
 
@@ -95,21 +84,29 @@ namespace Ped{
 
 		// The number of threads used
 		int num_threads;
-	
-		// Moves an agent towards its next position
-		void move(Ped::Tagent *agent);
-
-		// Moves an agent towards its next position
-		bool moveParallel(Ped::Tagent *agent, int i);
-
-		void addAgentToRegion(int i);
 
 		////////////
 		/// Everything below here won't be relevant until Assignment 3
 		///////////////////////////////////////////////
+	
+		std::deque<Region> regions;
+		int time;
+		double split_factor;
+		double merge_factor;
+
+		// Moves an agent towards its next position
+		void moveAllAgentsInRegions();
+		void adaptRegions();
+		void addAgentToRegion(int i);
+
+		std::pair<Region, Region> splitRegion(Region r);
+		Ped::Region mergeRegions(Region r1, Region r2);
+
+		bool moveParallel(Ped::Tagent *agent, int i);
+		void move(Ped::Tagent *agent);
 
 		// Returns the set of neighboring agents for the specified position
-		set<const Ped::Tagent*> getNeighbors(int x, int y, double dist) const;
+		set<const Ped::Tagent*> getNeighbors(int x, int y, int dist) const;
 
 		////////////
 		/// Everything below here won't be relevant until Assignment 4

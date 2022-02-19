@@ -242,130 +242,25 @@ void Ped::Model::tick()
 
 		case IMPLEMENTATION::MOVE_CONSTANT: // The aligned sequential implementation  with collision handling
 			{
-			omp_set_num_threads(this->num_threads);
-			// Parallelizing the loop using static scheduling.
-			#pragma omp parallel
-			{
-			#pragma omp single
-			{	
-				for (int i = 0; i < regions.size(); i++) {
-
-				#pragma omp task
-				{
-					this->moveAgentsInRegion(i);
-				}
-				}
-			}
-			}			
-
-			while (!this->agent_queue.empty())
-			{
-				int agent_index = this->agent_queue.front();
-				this->agent_queue.pop_front();
-				
-				agents_array->computeNextDesiredPositionMove(agent_index);
-				move(agents[agent_index]);
-				agents_array->reachedDestination(agent_index);
-				
-				// add the agent back to a region
-				this->addAgentToRegion(agent_index);
-			}
-
-			for (int i = 0; i < agents.size(); i++) {
-				for (int j = 0; j < i; j++)
-				{
-					if (agents[i]->getX() == agents[j]->getX() && agents[i]->getY() == agents[j]->getY())
-						std::cout << agents[i]->getX() << " " << agents[i]->getY() << std::endl;
-				}
-				
-			}
-
+				this->moveAllAgentsInRegions();
 			}
 			break;
 			
 		case IMPLEMENTATION::MOVE_ADAPTIVE: // The aligned OpenMP sequential implementation with collision handling
 			{
-			omp_set_num_threads(this->num_threads);
-			// int k;
-			// std::cin >> k;
-
-			double split_threshold = this->split_factor * min(this->agents.size() / this->regions.size(), this->agents.size() / this->num_threads);
-			double merge_threshold = this->merge_factor * max(this->agents.size() / this->regions.size(), this->agents.size() / this->num_threads);
-
 			// for (int i = 0; i < this->regions.size(); i++) {
 			// 	printf("Lowerbound [R%i]: %i\nUpperbound [R%i]: %i\nAgents [R%i]: %i\n", i, this->regions[i].getLowerBound(),
 			// 																			   i, this->regions[i].getUpperBound(),
 			// 																			   i, this->regions[i].getAgents().size());
 			// }
 
-			// printf("Split threshold: %.1f\nMerge threshold: %.1f\n", split_threshold, merge_threshold);
-
-			#pragma omp parallel
-			#pragma omp single
-			{
-			for (int i = 0; i < this->regions.size(); i++) {
-				#pragma omp task
-				{
-				this->moveAgentsInRegion(i);
-				}
-			}
-			}
-
-			while (!this->agent_queue.empty())
-			{
-				int agent_index = this->agent_queue.front();
-				this->agent_queue.pop_front();
-				
-				agents_array->computeNextDesiredPositionMove(agent_index); 
-				move(agents[agent_index]);
-				agents_array->reachedDestination(agent_index);
-				
-				// add the agent back to a region
-				this->addAgentToRegion(agent_index);
-
-			}
+			this->moveAllAgentsInRegions();
+			if (time % 10 == 0)
+				this->adaptRegions();
 			
-			if (time % 10 == 0) {
-				// Splitting regions
-				std::deque<Ped::Region> queue;
-				while (!this->regions.empty()) {
-					if (this->regions.front().getAgents().size() > split_threshold) {
-						std::pair<Ped::Region, Ped::Region> r = this->splitRegion(this->regions.front());
-						queue.push_back(r.first);
-						queue.push_back(r.second);
-						this->regions.pop_front();
-					} else {
-						queue.push_back(this->regions.front());
-						this->regions.pop_front();
-					}
-				}
-
-				// Merging regions
-				while (!queue.empty()) {
-					Region t = queue.front();
-					queue.pop_front();
-
-					if (!queue.empty() && queue.front().getAgents().size() + t.getAgents().size() < split_threshold &&
-						(queue.front().getAgents().size() < merge_threshold || t.getAgents().size() < merge_threshold)) {
-						this->regions.push_back(mergeRegions(t, queue.front()));
-						queue.pop_front();
-					} else {
-						this->regions.push_back(t);
-					}
-				}
 			}
-			// print position if two agents are there
-			for (int i = 0; i < agents.size(); i++) {
-				for (int j = 0; j < i; j++)
-				{
-					if (agents[i]->getX() == agents[j]->getX() && agents[i]->getY() == agents[j]->getY())
-						std::cout << agents[i]->getX() << " " << agents[i]->getY() << std::endl;
-				}
-				
-			}
-		}
-		break;
 		
+			break;
 	}
 	time++;
 }
@@ -374,16 +269,81 @@ void Ped::Model::tick()
 ///////////////////////////////////////////////////////////////////////////
 ///////////////////////////////////////////////////////////////////////////
 
-void Ped::Model::moveAgentsInRegion(int i) {
-	//std::cout << this->regions[i].getAgents().size() << std::endl;
+void Ped::Model::moveAllAgentsInRegions() {
+	omp_set_num_threads(this->num_threads);
+	// Parallelizing the loop using static scheduling.
+	#pragma omp parallel
+	#pragma omp single
+	{	
+		for (int i = 0; i < regions.size(); i++) {
 
-	for (int j = 0; j < this->regions[i].getAgents().size(); j++) {
-		int agent_id = this->regions[i].getAgents()[j];
-		agents_array->computeNextDesiredPositionMove(agent_id);
-		if (moveParallel(agents[agent_id], agent_id)) {
-			agents_array->reachedDestination(agent_id);
+		#pragma omp task
+		{
+			for (int j = 0; j < this->regions[i].getAgents().size(); j++) {
+				int agent_id = this->regions[i].getAgents()[j];
+				agents_array->computeNextDesiredPositionMove(agent_id);
+				if (moveParallel(agents[agent_id], agent_id)) {
+					agents_array->reachedDestination(agent_id);
+				} else {
+					this->regions[i].removeAgent(agent_id);
+				}
+			}
+		}
+		}
+	}
+
+	while (!this->agent_queue.empty())
+	{
+		int agent_index = this->agent_queue.front();
+		this->agent_queue.pop_front();
+		
+		agents_array->computeNextDesiredPositionMove(agent_index);
+		move(agents[agent_index]);
+		agents_array->reachedDestination(agent_index);
+		
+		// add the agent back to a region
+		this->addAgentToRegion(agent_index);
+	}
+
+	for (int i = 0; i < agents.size(); i++) {
+		for (int j = 0; j < i; j++)
+		{
+			if (agents[i]->getX() == agents[j]->getX() && agents[i]->getY() == agents[j]->getY())
+				std::cout << agents[i]->getX() << " " << agents[i]->getY() << std::endl;
+		}
+		
+	}
+}
+
+void Ped::Model::adaptRegions() {
+	double split_threshold = this->split_factor * min(this->agents.size() / this->regions.size(), this->agents.size() / this->num_threads);
+	double merge_threshold = this->merge_factor * max(this->agents.size() / this->regions.size(), this->agents.size() / this->num_threads);
+
+	// Splitting regions
+	std::deque<Ped::Region> queue;
+	while (!this->regions.empty()) {
+		if (this->regions.front().getAgents().size() > split_threshold) {
+			std::pair<Ped::Region, Ped::Region> r = this->splitRegion(this->regions.front());
+			queue.push_back(r.first);
+			queue.push_back(r.second);
+			this->regions.pop_front();
 		} else {
-			this->regions[i].removeAgent(agent_id);
+			queue.push_back(this->regions.front());
+			this->regions.pop_front();
+		}
+	}
+
+	// Merging regions
+	while (!queue.empty()) {
+		Region t = queue.front();
+		queue.pop_front();
+
+		if (!queue.empty() && queue.front().getAgents().size() + t.getAgents().size() < split_threshold &&
+			(queue.front().getAgents().size() < merge_threshold || t.getAgents().size() < merge_threshold)) {
+			this->regions.push_back(mergeRegions(t, queue.front()));
+			queue.pop_front();
+		} else {
+			this->regions.push_back(t);
 		}
 	}
 }
@@ -395,10 +355,6 @@ void Ped::Model::addAgentToRegion(int i) {
 			return;
 		}
 	}
-
-	// just in case the if statement in the loop do not work
-	// requires the regions to be sorted from lower x to higher x values
-	//this->regions[this->regions.size()-1].addAgent(i);
 }
 
 std::pair<Ped::Region, Ped::Region> Ped::Model::splitRegion(Region r) {
@@ -573,10 +529,7 @@ void Ped::Model::move(Ped::Tagent *agent)
 /// \param   x the x coordinate
 /// \param   y the y coordinate
 /// \param   dist the distance around x/y that will be searched for agents (search field is a square in the current implementation)
-set<const Ped::Tagent*> Ped::Model::getNeighbors(int x, int y, double dist) const {
-	// TODO: Don't include all agents as your neighbors.
-	// create the output list
-	// ( It would be better to include only the agents close by, but this programmer is lazy.)	
+set<const Ped::Tagent*> Ped::Model::getNeighbors(int x, int y, int dist) const {
 
 	std::set<const Ped::Tagent*> neighbors;
 	for (int i = 0; i < agents.size(); i++)
