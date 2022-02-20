@@ -33,8 +33,10 @@ namespace Ped {
 		// The function computing and setting the new destination and location
         void computeNextDesiredPosition(int i);
 
+		// Same as computeNextDesiredPosition, but with the collision-avoidance part included
         void computeNextDesiredPositionMove(int i);
 
+		// Checks whether or not an agent has reached its destination
 		void reachedDestination(int i);
 
 		// The vector of the agents

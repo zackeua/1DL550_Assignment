@@ -24,7 +24,6 @@
 #include <smmintrin.h>
 #include <immintrin.h>
 
-
 // The C++ Threads tick function
 void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
 	int block_size = model->agents.size() / (model->num_threads);
@@ -40,8 +39,7 @@ void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
 		model->agents_array->computeNextDesiredPosition(i);
 }
 
-void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads, double split_factor, double merge_factor)
-{
+void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads, double split_factor, double merge_factor) {
 	// Testing if CUDA works on this machine
 	// cuda_test();
 
@@ -70,22 +68,26 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// Setting the number of threads
 	this->num_threads = num_threads;
 
+	// The factors governing when to split and merge regions, respectively
 	this->split_factor = split_factor;
 	this->merge_factor = merge_factor;
 
+	// The time keeping track of when to update the regions
 	this->time = 0;
 
+    // Setting the initial lower and upper bound of each region
 	for (int i = 0; i < this->num_threads; i++) {
 		Region r = Region(0, 0);
-		r.setLowerBound(160/this->num_threads * i);
-		r.setUpperBound(160/this->num_threads * (i+1));
+		r.setLowerBound(160 / this->num_threads * i);
+		r.setUpperBound(160 / this->num_threads * (i+1));
 		this->regions.push_back(r);
 	}
+	// Giving the right-most region the remaining part
 	this->regions[this->num_threads-1].setUpperBound(160);
 
+	// Adding the agents to their respective regions
 	for (int i = 0; i < agents.size(); i++) {
 		for (int j = 0; j < this->num_threads; j++) {
-
 			if (this->regions[j].getLowerBound() <= agents[i]->getX() && agents[i]->getX() < this->regions[j].getUpperBound()) {
 				this->regions[j].addAgent(i);
 			}
@@ -96,8 +98,7 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	setupHeatmapSeq();
 }
 
-void Ped::Model::tick()
-{
+void Ped::Model::tick() {
 	// Choosing the implementation
 	switch (this->implementation) {
 		case IMPLEMENTATION::SEQ1: // The initial sequential implementation
@@ -229,71 +230,75 @@ void Ped::Model::tick()
 		}
 		break;
 		
-		case IMPLEMENTATION::MOVE_SEQ: // The initial sequential implementation with collision handling
+		// The initial sequential implementation with collision handling
+		case IMPLEMENTATION::MOVE_SEQ:
 			{
-			
-			for (int i = 0; i < agents.size(); i++) { // This implementation is done
+			for (int i = 0; i < agents.size(); i++) {
 				agents[i]->computeNextDesiredPosition();
-				move(agents[i]);
+				move(agents[i]); // Avoiding the collisions
 			}
-
 			}
 			break;
-
-		case IMPLEMENTATION::MOVE_CONSTANT: // The aligned sequential implementation  with collision handling
+		
+		
+		// The aligned sequential implementation  with collision handling
+		case IMPLEMENTATION::MOVE_CONSTANT:
 			{
+				// Move all agents
 				this->moveAllAgentsInRegions();
 			}
 			break;
-			
-		case IMPLEMENTATION::MOVE_ADAPTIVE: // The aligned OpenMP sequential implementation with collision handling
+		
+		// The aligned OpenMP sequential implementation with collision handling
+		case IMPLEMENTATION::MOVE_ADAPTIVE:
 			{
+			// Printouts showing the region bounds and their number of agents
 			// for (int i = 0; i < this->regions.size(); i++) {
 			// 	printf("Lowerbound [R%i]: %i\nUpperbound [R%i]: %i\nAgents [R%i]: %i\n", i, this->regions[i].getLowerBound(),
 			// 																			   i, this->regions[i].getUpperBound(),
 			// 																			   i, this->regions[i].getAgents().size());
 			// }
 
+			// Move all agents
 			this->moveAllAgentsInRegions();
+
+			// Updating the number and size of the regions every 10th timestep
 			if (time % 10 == 0)
 				this->adaptRegions();
-			
 			}
 		
 			break;
 	}
+	// Stepping the time for the adaptRegions to know when to update
 	time++;
 }
 
-///////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////
-
 void Ped::Model::moveAllAgentsInRegions() {
+	// Setting the number of threads to run
 	omp_set_num_threads(this->num_threads);
-	// Parallelizing the loop using static scheduling.
+
+	// Parallelizing the loop using OpenMP with tasks.
 	#pragma omp parallel
 	#pragma omp single
 	{	
 		for (int i = 0; i < regions.size(); i++) {
-
-		#pragma omp task
-		{
-			for (int j = 0; j < this->regions[i].getAgents().size(); j++) {
-				int agent_id = this->regions[i].getAgents()[j];
-				agents_array->computeNextDesiredPositionMove(agent_id);
-				if (moveParallel(agents[agent_id], agent_id)) {
-					agents_array->reachedDestination(agent_id);
-				} else {
-					this->regions[i].removeAgent(agent_id);
+			#pragma omp task
+			{
+				for (int j = 0; j < this->regions[i].getAgents().size(); j++) {
+					int agent_id = this->regions[i].getAgents()[j];
+					agents_array->computeNextDesiredPositionMove(agent_id);
+					if (moveParallel(agents[agent_id], agent_id)) {
+						agents_array->reachedDestination(agent_id);
+					} else {
+						this->regions[i].removeAgent(agent_id);
+					}
 				}
 			}
 		}
-		}
 	}
 
-	while (!this->agent_queue.empty())
-	{
+	// Moving all of the agents
+	while (!this->agent_queue.empty()) {
 		int agent_index = this->agent_queue.front();
 		this->agent_queue.pop_front();
 		
@@ -301,20 +306,20 @@ void Ped::Model::moveAllAgentsInRegions() {
 		move(agents[agent_index]);
 		agents_array->reachedDestination(agent_index);
 		
-		// add the agent back to a region
+		// Add the agent back to a region
 		this->addAgentToRegion(agent_index);
 	}
 
+	// Printing the coordinates of agents which collide in order to dect the collisions
 	for (int i = 0; i < agents.size(); i++) {
-		for (int j = 0; j < i; j++)
-		{
+		for (int j = 0; j < i; j++) {
 			if (agents[i]->getX() == agents[j]->getX() && agents[i]->getY() == agents[j]->getY())
 				std::cout << agents[i]->getX() << " " << agents[i]->getY() << std::endl;
 		}
-		
 	}
 }
 
+// Splitting a region or merging two regions
 void Ped::Model::adaptRegions() {
 	double split_threshold = this->split_factor * min(this->agents.size() / this->regions.size(), this->agents.size() / this->num_threads);
 	double merge_threshold = this->merge_factor * max(this->agents.size() / this->regions.size(), this->agents.size() / this->num_threads);
@@ -348,6 +353,7 @@ void Ped::Model::adaptRegions() {
 	}
 }
 
+// Finding which region to add an agent to
 void Ped::Model::addAgentToRegion(int i) {
 	for (int j = 0; j < this->regions.size(); j++) {
 		if (this->agents_array->x[i] <= this->regions.at(j).getUpperBound()) {
@@ -357,14 +363,19 @@ void Ped::Model::addAgentToRegion(int i) {
 	}
 }
 
+// Split regions which are too big in order to improve load balancing
 std::pair<Ped::Region, Ped::Region> Ped::Model::splitRegion(Region r) {
+	// Create two new regions to split the regions into
 	Region r1 = Region(0, 0);
+	Region r2 = Region(0, 0);
+
+	// Give them the lowermost and uppermost bounds, and share the midpoint
 	r1.setLowerBound(r.getLowerBound());
 	r1.setUpperBound((r.getLowerBound() + r.getUpperBound()) / 2);
-	Region r2 = Region(0, 0);
 	r2.setLowerBound((r.getLowerBound() + r.getUpperBound()) / 2);
 	r2.setUpperBound(r.getUpperBound());
 	
+	// Move the agents to the right region
 	for (int i = 0; i < r.getAgents().size(); i++) {
 		if (this->agents_array->x[r.getAgents()[i]] < r1.getUpperBound())
 			r1.addAgent(r.getAgents()[i]);
@@ -375,11 +386,16 @@ std::pair<Ped::Region, Ped::Region> Ped::Model::splitRegion(Region r) {
 	return std::pair<Ped::Region, Ped::Region>(r1, r2);
 }
 
+// Merge regions which are too small to warrant their existence
 Ped::Region Ped::Model::mergeRegions(Region r1, Region r2) {
+	// Create a new region to return
 	Region r = Region(0, 0);
+
+	// Give it the upper and lower bound of the previous regions
 	r.setLowerBound(r1.getLowerBound());
 	r.setUpperBound(r2.getUpperBound());
 	
+	// Transferring the agents from each region to the merged one
 	for (int i = 0; i < r1.getAgents().size(); i++)
 		r.addAgent(r1.getAgents()[i]);
 	for (int i = 0; i < r2.getAgents().size(); i++)
@@ -390,9 +406,7 @@ Ped::Region Ped::Model::mergeRegions(Region r1, Region r2) {
 
 // Moves the agent to the next desired position. If already taken, it will
 // be moved to a location close to it.
-bool Ped::Model::moveParallel(Ped::Tagent *agent, int i)
-{
-	//? Should we keep everything as agent objects?
+bool Ped::Model::moveParallel(Ped::Tagent *agent, int i) {
 	// Search for neighboring agents
 	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
 
@@ -412,13 +426,12 @@ bool Ped::Model::moveParallel(Ped::Tagent *agent, int i)
 	int diffX = pDesired.first - agent->getX();
 	int diffY = pDesired.second - agent->getY();
 	std::pair<int, int> p1, p2;
-	if (diffX == 0 || diffY == 0)
-	{
+	
+	if (diffX == 0 || diffY == 0) {
 		// Agent wants to walk straight to North, South, West or East
 		p1 = std::make_pair(pDesired.first + diffY, pDesired.second + diffX);
 		p2 = std::make_pair(pDesired.first - diffY, pDesired.second - diffX);
-	}
-	else {
+	} else {
 		// Agent wants to walk diagonally
 		p1 = std::make_pair(pDesired.first, agent->getY());
 		p2 = std::make_pair(agent->getX(), pDesired.second);
@@ -433,6 +446,7 @@ bool Ped::Model::moveParallel(Ped::Tagent *agent, int i)
 		// If the current position is not yet taken by any neighbor
 		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
 			for (int j = 0; j < this->regions.size(); j++) {
+				// and it is not crossing any of the boundaries
 				if (j == 0 && agent->getX() < this->regions.at(j).getUpperBound() && this->regions.at(j).getUpperBound() - off <= (*it).first) {
 					this->agent_queue.push_back(i);
 					return false;
@@ -445,7 +459,7 @@ bool Ped::Model::moveParallel(Ped::Tagent *agent, int i)
 				}
 			}
 
-			// Set the agent's position 
+			// then the agent's new position is set
 			agent->setX((*it).first);
 			agent->setY((*it).second);
 			return true;
@@ -453,16 +467,7 @@ bool Ped::Model::moveParallel(Ped::Tagent *agent, int i)
 		}
 	}
 	return true;
-
 }
-
-///////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////
-///////////////////////////////////////////////////////////////////////////
-
 
 ////////////
 /// Everything below here relevant for Assignment 3.
@@ -471,9 +476,7 @@ bool Ped::Model::moveParallel(Ped::Tagent *agent, int i)
 
 // Moves the agent to the next desired position. If already taken, it will
 // be moved to a location close to it.
-void Ped::Model::move(Ped::Tagent *agent)
-{
-	//? Should we keep everything as agent objects?
+void Ped::Model::move(Ped::Tagent *agent) {
 	// Search for neighboring agents
 	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
 
@@ -493,13 +496,12 @@ void Ped::Model::move(Ped::Tagent *agent)
 	int diffX = pDesired.first - agent->getX();
 	int diffY = pDesired.second - agent->getY();
 	std::pair<int, int> p1, p2;
-	if (diffX == 0 || diffY == 0)
-	{
+
+	if (diffX == 0 || diffY == 0) {
 		// Agent wants to walk straight to North, South, West or East
 		p1 = std::make_pair(pDesired.first + diffY, pDesired.second + diffX);
 		p2 = std::make_pair(pDesired.first - diffY, pDesired.second - diffX);
-	}
-	else {
+	} else {
 		// Agent wants to walk diagonally
 		p1 = std::make_pair(pDesired.first, agent->getY());
 		p2 = std::make_pair(agent->getX(), pDesired.second);
@@ -509,10 +511,8 @@ void Ped::Model::move(Ped::Tagent *agent)
 
 	// Find the first empty alternative position
 	for (std::vector<pair<int, int> >::iterator it = prioritizedAlternatives.begin(); it != prioritizedAlternatives.end(); ++it) {
-
 		// If the current position is not yet taken by any neighbor
 		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
-
 			// Set the agent's position 
 			agent->setX((*it).first);
 			agent->setY((*it).second);
@@ -530,12 +530,13 @@ void Ped::Model::move(Ped::Tagent *agent)
 /// \param   y the y coordinate
 /// \param   dist the distance around x/y that will be searched for agents (search field is a square in the current implementation)
 set<const Ped::Tagent*> Ped::Model::getNeighbors(int x, int y, int dist) const {
-
+	// Only including the agents which are within the distance dist in order to decrease the computational cost
 	std::set<const Ped::Tagent*> neighbors;
-	for (int i = 0; i < agents.size(); i++)
+	for (int i = 0; i < agents.size(); i++) {
 		if (sqrt((x - agents[i]->getX()) * (x - agents[i]->getX()) +
 		         (y - agents[i]->getY()) * (y - agents[i]->getY())) < dist) {
 			neighbors.insert(agents[i]);
+		}
 	}
 	return neighbors;
 }
@@ -544,8 +545,7 @@ void Ped::Model::cleanup() {
 	// Nothing to do here right now. 
 }
 
-Ped::Model::~Model()
-{
+Ped::Model::~Model() {
 	this->cuda_array.free(agents_array);
 	//std::for_each(agents.begin(), agents.end(), [](Ped::Tagent *agent){delete agent;});
 	//std::for_each(destinations.begin(), destinations.end(), [](Ped::Twaypoint *destination){delete destination; });

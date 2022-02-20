@@ -66,8 +66,7 @@ Ped::Twaypoint* Ped::Tagent::getNextDestination() {
 		waypoints.push_back(destination);
 		nextDestination = waypoints.front();
 		waypoints.pop_front();
-	}
-	else {
+	} else {
 		// Case 2: Agent has not yet reached destination, continue to move towards
 		// current destination
 		nextDestination = destination;

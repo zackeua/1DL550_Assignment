@@ -24,8 +24,10 @@
 namespace Ped{
 	class Tagent;
 
-	// The implementation modes for Assignment 1 + 2:
-	// chooses which implementation to use for tick()
+	// The implementation modes: Chooses which implementation to use for tick()
+	// SEQ1 is the standard sequential one, and SEQ is the memory-aligned one.
+	// The MOVE implemntations run the move function, and MOVE_CONSTANT and MOVE_ADAPTIVE
+	// run with a constant and adaptive number of regions, respectively.
 	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ, SEQ1, MOVE_SEQ, MOVE_CONSTANT, MOVE_ADAPTIVE };
 
 	class Model
@@ -38,6 +40,7 @@ namespace Ped{
 		// Coordinates a time step in the scenario: move all agents by one step (if applicable).
 		void tick();
 
+		// Getting all of the regions
 		std::deque<Region> getRegions() const { return this->regions; };
 
 		// Returns the agents of this scenario
@@ -89,19 +92,28 @@ namespace Ped{
 		/// Everything below here won't be relevant until Assignment 3
 		///////////////////////////////////////////////
 	
+		// The region queue needed to update regions
 		std::deque<Region> regions;
-		int time;
+
+		// The factors governing when to split and merge regions, respectively
 		double split_factor;
 		double merge_factor;
 
-		// Moves an agent towards its next position
+		// The time keeping track of when to update the regions
+		int time;
+
+		// This function moves an agent towards its next position
 		void moveAllAgentsInRegions();
+
+		// These functions propagate the change of the regions
 		void adaptRegions();
 		void addAgentToRegion(int i);
 
+		// These functions allow the change of the regions
 		std::pair<Region, Region> splitRegion(Region r);
 		Ped::Region mergeRegions(Region r1, Region r2);
 
+		// The parallelized and standard move functions, respectively
 		bool moveParallel(Ped::Tagent *agent, int i);
 		void move(Ped::Tagent *agent);
 

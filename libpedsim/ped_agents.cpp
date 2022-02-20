@@ -17,7 +17,6 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
 	
 	this->agents = agents;
 	
-
 	// Setting the agent coordinates and the destination coordinates, and acceptance radius
     this->x = new float[agents.size()];// __attribute__((aligned(32)))
     this->y = new float[agents.size()];// __attribute__((aligned(32)))
@@ -44,14 +43,17 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
         this->x[i] = (float)agents[i]->getX();
         this->y[i] = (float)agents[i]->getY();
 		
+		// Loading the waypoints
 		this->waypoints[i] = &(agents[i]->waypoints);
 
+		// Allocating the waypoint replacement structures
 		this->waypoint_x[i] = new float[agents[i]->waypoints.size()];
 		this->waypoint_y[i] = new float[agents[i]->waypoints.size()];
 		this->waypoint_r[i] = new float[agents[i]->waypoints.size()];
 		this->waypoint_ptr[i] = 0;
 		this->waypoint_len[i] = agents[i]->waypoints.size();
 
+		// Transferring the data from the waypoints to the replacement structure
 		for (int j = 0; j < agents[i]->waypoints.size(); j++) {
 			this->waypoint_x[i][j] = agents[i]->waypoints.at(j)->getx();
 			this->waypoint_y[i][j] = agents[i]->waypoints.at(j)->gety();
@@ -65,8 +67,6 @@ Ped::Tagents::Tagents(std::vector<Ped::Tagent*> agents) {
 		this->waypoint_ptr[i] = 1;
     }
 }
-
-///////////////////////////////////////////////////////////////////////////
 
 void Ped::Tagents::computeNextDesiredPosition(int i) {
 	// Computing the difference from the current location and the destination coordinatewise
@@ -101,11 +101,7 @@ void Ped::Tagents::computeNextDesiredPosition(int i) {
 	}
 }
 
-///////////////////////////////////////////////////////////////////////////
-
-void Ped::Tagents::computeNextDesiredPositionMove(int i) {
-	
-	
+void Ped::Tagents::computeNextDesiredPositionMove(int i) {	
 	// Computing the difference from the current location and the destination coordinatewise
 	double diffX = dest_x[i] - this->x[i];
 	double diffY = dest_y[i] - this->y[i];
@@ -114,7 +110,6 @@ void Ped::Tagents::computeNextDesiredPositionMove(int i) {
 	double len = sqrt(diffX * diffX + diffY * diffY);
 	
 	// Updating the new position from the differnces in x and y divided by the length
-	
 	this->desiredX[i] = (int)round(this->x[i] + diffX / len);
 	this->desiredY[i] = (int)round(this->y[i] + diffY / len);
 
