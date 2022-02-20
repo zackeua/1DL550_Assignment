@@ -464,16 +464,9 @@ bool Ped::Model::moveLock(Ped::Tagent *agent, int i) {
 		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
 			for (int j = 0; j < this->regions.size(); j++) {
 				// and it is not crossing any of the boundaries
-				if (j == 0 && agent->getX() < this->regions.at(j).getUpperBound() && this->regions.at(j).getUpperBound() - off <= (*it).first) {
+				if ((this->regions.at(j).getLowerBound() <= agent->getX()) && (agent->getX() < this->regions.at(j).getUpperBound()) &&
+				    ((this->regions.at(j).getUpperBound() - off <= (*it).first) || ((*it).first <= this->regions.at(j).getLowerBound() + off))) {
 					// Using criticial sections in each scenario here to prevent a race condition
-					#pragma omp critical
-					this->agent_queue.push_back(i);
-					return false;
-				} else if (j == this->regions.size()-1 && this->regions.at(j).getLowerBound() <= agent->getX() && (*it).first <= this->regions.at(j).getLowerBound() + off) {
-					#pragma omp critical
-					this->agent_queue.push_back(i);
-					return false;
-				} else if (this->regions.at(j).getLowerBound() <= agent->getX() && agent->getX() < this->regions.at(j).getUpperBound() && (this->regions.at(j).getUpperBound() - off <= (*it).first || (*it).first <= this->regions.at(j).getLowerBound() + off)) {
 					#pragma omp critical
 					this->agent_queue.push_back(i);
 					return false;
@@ -488,7 +481,6 @@ bool Ped::Model::moveLock(Ped::Tagent *agent, int i) {
 	}
 	return true;
 }
-
 
 // Moves the agent to the next desired position. If already taken, it will
 // be moved to a location close to it.
@@ -533,12 +525,12 @@ bool Ped::Model::moveCAS(Ped::Tagent *agent, int i) {
 		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
 			for (int j = 0; j < this->regions.size(); j++) {
 				// and it is not crossing any of the boundaries
-				if (j == 0 && agent->getX() < this->regions.at(j).getUpperBound() && this->regions.at(j).getUpperBound() - off <= (*it).first) {
+				if ((this->regions.at(j).getLowerBound() <= agent->getX()) && (agent->getX() < this->regions.at(j).getUpperBound()) &&
+				    ((this->regions.at(j).getUpperBound() - off <= (*it).first) || ((*it).first <= this->regions.at(j).getLowerBound() + off))) {
 					// Using Compare-and-Swap in each scenario here to prevent a race condition
 					while (1) {
 						bool true_bool;
 						bool false_bool;
-						bool retval;
 						true_bool = true; 
 						false_bool = false;
 						if (allowedToPush.compare_exchange_strong(true_bool, false_bool, std::memory_order_release, std::memory_order_relaxed)) {
@@ -548,39 +540,8 @@ bool Ped::Model::moveCAS(Ped::Tagent *agent, int i) {
 							allowedToPush.compare_exchange_weak(false_bool, true_bool, std::memory_order_release, std::memory_order_relaxed);
 							return false;
 						}
-					}
-					
-				} else if (j == this->regions.size()-1 && this->regions.at(j).getLowerBound() <= agent->getX() && (*it).first <= this->regions.at(j).getLowerBound() + off) {
-					while (1) {
-						bool true_bool;
-						bool false_bool;
-						bool retval;
-						true_bool = true; 
-						false_bool = false;
-						if (allowedToPush.compare_exchange_strong(true_bool, false_bool, std::memory_order_release, std::memory_order_relaxed)) {
-							this->agent_queue.push_back(i);
-							true_bool = true; 
-							false_bool = false;
-							allowedToPush.compare_exchange_weak(false_bool, true_bool, std::memory_order_release, std::memory_order_relaxed);
-							return false;
-						}
-					}
-				} else if (this->regions.at(j).getLowerBound() <= agent->getX() && agent->getX() < this->regions.at(j).getUpperBound() && (this->regions.at(j).getUpperBound() - off <= (*it).first || (*it).first <= this->regions.at(j).getLowerBound() + off)) {
-					while (1) {
-						bool true_bool;
-						bool false_bool;
-						bool retval;
-						true_bool = true; 
-						false_bool = false;
-						if (allowedToPush.compare_exchange_strong(true_bool, false_bool, std::memory_order_release, std::memory_order_relaxed)) {
-							this->agent_queue.push_back(i);
-							true_bool = true; 
-							false_bool = false;
-							allowedToPush.compare_exchange_weak(false_bool, true_bool, std::memory_order_release, std::memory_order_relaxed);
-							return false;
-						}
-					}
-				}
+					}	
+				} 
 			}
 
 			// then the agent's new position is set
