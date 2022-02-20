@@ -545,9 +545,7 @@ bool Ped::Model::moveCAS(Ped::Tagent *agent, int i) {
 						bool retval;
 						true_bool = true; 
 						false_bool = false;
-						retval = allowedToPush.compare_exchange_strong(true_bool, false_bool, std::memory_order_release, std::memory_order_relaxed);
-						if (retval) {
-							std::cout << "in here" << std::endl;
+						if (allowedToPush.compare_exchange_strong(true_bool, false_bool, std::memory_order_release, std::memory_order_relaxed)) {
 							this->agent_queue.push_back(i);
 							true_bool = true; 
 							false_bool = false;
@@ -564,17 +562,13 @@ bool Ped::Model::moveCAS(Ped::Tagent *agent, int i) {
 						bool retval;
 						true_bool = true; 
 						false_bool = false;
-						retval = allowedToPush.compare_exchange_weak(true_bool, false_bool, std::memory_order_release, std::memory_order_relaxed);
-						if (retval) {
-							std::cout << "in here" << std::endl;
+						if (allowedToPush.compare_exchange_strong(true_bool, false_bool, std::memory_order_release, std::memory_order_relaxed)) {
 							this->agent_queue.push_back(i);
 							true_bool = true; 
 							false_bool = false;
 							allowedToPush.compare_exchange_weak(false_bool, true_bool, std::memory_order_release, std::memory_order_relaxed);
 							return false;
 						}
-						std::cout << retval << std::endl;
-
 					}
 				} else if (this->regions.at(j).getLowerBound() <= agent->getX() && agent->getX() < this->regions.at(j).getUpperBound() && (this->regions.at(j).getUpperBound() - off <= (*it).first || (*it).first <= this->regions.at(j).getLowerBound() + off)) {
 					
@@ -584,17 +578,13 @@ bool Ped::Model::moveCAS(Ped::Tagent *agent, int i) {
 						bool retval;
 						true_bool = true; 
 						false_bool = false;
-						retval = allowedToPush.compare_exchange_weak(true_bool, false_bool, std::memory_order_release, std::memory_order_relaxed);
-						if (retval) {
-							std::cout << "in here" << std::endl;
+						if (allowedToPush.compare_exchange_strong(true_bool, false_bool, std::memory_order_release, std::memory_order_relaxed)) {
 							this->agent_queue.push_back(i);
 							true_bool = true; 
 							false_bool = false;
 							allowedToPush.compare_exchange_weak(false_bool, true_bool, std::memory_order_release, std::memory_order_relaxed);
 							return false;
 						}
-						std::cout << retval << std::endl;
-
 					}
 				}
 			}
