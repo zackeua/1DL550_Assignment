@@ -117,6 +117,7 @@ void Ped::Tagents::computeNextDesiredPositionMove(int i) {
 	this->agents[i]->setDesiredX(desiredX[i]);
 	this->agents[i]->setDesiredY(desiredY[i]);
 
+	// Setting the desired positions for the move function
 	this->agents[i]->desiredPositionX = desiredX[i];
 	this->agents[i]->desiredPositionY = desiredY[i];
 }

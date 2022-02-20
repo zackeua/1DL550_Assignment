@@ -19,6 +19,7 @@
 #include <omp.h>
 #include <thread>
 #include <math.h>
+#include <atomic>
 
 #include <xmmintrin.h>
 #include <smmintrin.h>
@@ -75,6 +76,9 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 	// The time keeping track of when to update the regions
 	this->time = 0;
 
+	// The variable that Compare-and-Swap manipulates
+	this->allowedToPush = true;
+
     // Setting the initial lower and upper bound of each region
 	for (int i = 0; i < this->num_threads; i++) {
 		Region r = Region(0, 0);
@@ -106,14 +110,14 @@ void Ped::Model::tick() {
 				agents[i]->computeNextDesiredPosition();
 				agents[i]->setX(agents[i]->getDesiredX());
 				agents[i]->setY(agents[i]->getDesiredY());
-				
 			}
+			
 			break;
 			
 		case IMPLEMENTATION::SEQ: // The refactored sequential implementation
 			for (int i = 0; i < agents.size(); i++)
 				agents_array->computeNextDesiredPosition(i);
-				
+			
 			break;
 
 		case IMPLEMENTATION::OMP: // The OpenMP implementation
@@ -124,7 +128,7 @@ void Ped::Model::tick() {
 			#pragma omp parallel for schedule(static) 
 			for (int i = 0; i < agents.size(); i++)
 				agents_array->computeNextDesiredPosition(i);
-				
+			
 			break;
 			
 		case IMPLEMENTATION::PTHREAD: // The C++ Threads implementation
@@ -143,8 +147,9 @@ void Ped::Model::tick() {
 			// Deleting the thread list
 			delete[] worker;
 			}
+			
 			break;
-		
+
 		case IMPLEMENTATION::VECTOR: // The SIMD implementation
 			{
 			// Allocating the intrinsics for the vectorization
@@ -215,7 +220,7 @@ void Ped::Model::tick() {
 					this->agents_array->dest_x[i+3] = this->agents_array->waypoint_x[i+3][this->agents_array->waypoint_ptr[i+3]];
 					this->agents_array->dest_y[i+3] = this->agents_array->waypoint_y[i+3][this->agents_array->waypoint_ptr[i+3]];
 					this->agents_array->dest_r[i+3] = this->agents_array->waypoint_r[i+3][this->agents_array->waypoint_ptr[i+3]];
-
+					
 					this->agents_array->waypoint_ptr[i+3] += 1;
 					if (this->agents_array->waypoint_ptr[i+3] == this->agents_array->waypoint_len[i+3])
 						this->agents_array->waypoint_ptr[i+3] = 0;
@@ -278,7 +283,7 @@ void Ped::Model::moveAllAgentsInRegions() {
 	omp_set_num_threads(this->num_threads);
 
 	// Parallelizing the loop using OpenMP with tasks.
-	#pragma omp parallel
+	#pragma omp parallel shared(allowedToPush, agents, regions, agents_array)
 	#pragma omp single
 	{	
 		for (int i = 0; i < regions.size(); i++) {
@@ -287,10 +292,22 @@ void Ped::Model::moveAllAgentsInRegions() {
 				for (int j = 0; j < this->regions[i].getAgents().size(); j++) {
 					int agent_id = this->regions[i].getAgents()[j];
 					agents_array->computeNextDesiredPositionMove(agent_id);
-					if (moveParallel(agents[agent_id], agent_id)) {
-						agents_array->reachedDestination(agent_id);
-					} else {
-						this->regions[i].removeAgent(agent_id);
+					switch (this->implementation)
+					{
+						case IMPLEMENTATION::MOVE_CONSTANT:
+							if (moveLock(agents[agent_id], agent_id)) {
+								agents_array->reachedDestination(agent_id);
+							} else {
+								this->regions[i].removeAgent(agent_id);
+							}
+							break;
+						case IMPLEMENTATION::MOVE_ADAPTIVE:
+							if (moveCAS(agents[agent_id], agent_id)) {
+								agents_array->reachedDestination(agent_id);
+							} else {
+								this->regions[i].removeAgent(agent_id);
+							}
+							break;
 					}
 				}
 			}
@@ -406,7 +423,7 @@ Ped::Region Ped::Model::mergeRegions(Region r1, Region r2) {
 
 // Moves the agent to the next desired position. If already taken, it will
 // be moved to a location close to it.
-bool Ped::Model::moveParallel(Ped::Tagent *agent, int i) {
+bool Ped::Model::moveLock(Ped::Tagent *agent, int i) {
 	// Search for neighboring agents
 	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
 
@@ -448,12 +465,16 @@ bool Ped::Model::moveParallel(Ped::Tagent *agent, int i) {
 			for (int j = 0; j < this->regions.size(); j++) {
 				// and it is not crossing any of the boundaries
 				if (j == 0 && agent->getX() < this->regions.at(j).getUpperBound() && this->regions.at(j).getUpperBound() - off <= (*it).first) {
+					// Using criticial sections in each scenario here to prevent a race condition
+					#pragma omp critical
 					this->agent_queue.push_back(i);
 					return false;
 				} else if (j == this->regions.size()-1 && this->regions.at(j).getLowerBound() <= agent->getX() && (*it).first <= this->regions.at(j).getLowerBound() + off) {
+					#pragma omp critical
 					this->agent_queue.push_back(i);
 					return false;
 				} else if (this->regions.at(j).getLowerBound() <= agent->getX() && agent->getX() < this->regions.at(j).getUpperBound() && (this->regions.at(j).getUpperBound() - off <= (*it).first || (*it).first <= this->regions.at(j).getLowerBound() + off)) {
+					#pragma omp critical
 					this->agent_queue.push_back(i);
 					return false;
 				}
@@ -463,11 +484,114 @@ bool Ped::Model::moveParallel(Ped::Tagent *agent, int i) {
 			agent->setX((*it).first);
 			agent->setY((*it).second);
 			return true;
-			
 		}
 	}
 	return true;
 }
+
+
+// Moves the agent to the next desired position. If already taken, it will
+// be moved to a location close to it.
+bool Ped::Model::moveCAS(Ped::Tagent *agent, int i) {
+	// Search for neighboring agents
+	set<const Ped::Tagent *> neighbors = getNeighbors(agent->getX(), agent->getY(), 2);
+
+	// Retrieve their positions
+	std::vector<std::pair<int, int> > takenPositions;
+	for (std::set<const Ped::Tagent*>::iterator neighborIt = neighbors.begin(); neighborIt != neighbors.end(); ++neighborIt) {
+		std::pair<int, int> position((*neighborIt)->getX(), (*neighborIt)->getY());
+		takenPositions.push_back(position);
+	}
+
+	// Compute the three alternative positions that would bring the agent
+	// closer to his desiredPosition, starting with the desiredPosition itself
+	std::vector<std::pair<int, int> > prioritizedAlternatives;
+	std::pair<int, int> pDesired(agent->getDesiredX(), agent->getDesiredY());
+	prioritizedAlternatives.push_back(pDesired);
+
+	int diffX = pDesired.first - agent->getX();
+	int diffY = pDesired.second - agent->getY();
+	std::pair<int, int> p1, p2;
+	
+	if (diffX == 0 || diffY == 0) {
+		// Agent wants to walk straight to North, South, West or East
+		p1 = std::make_pair(pDesired.first + diffY, pDesired.second + diffX);
+		p2 = std::make_pair(pDesired.first - diffY, pDesired.second - diffX);
+	} else {
+		// Agent wants to walk diagonally
+		p1 = std::make_pair(pDesired.first, agent->getY());
+		p2 = std::make_pair(agent->getX(), pDesired.second);
+	}
+	prioritizedAlternatives.push_back(p1);
+	prioritizedAlternatives.push_back(p2);
+
+	int off = 2;
+	// Find the first empty alternative position
+	for (std::vector<pair<int, int> >::iterator it = prioritizedAlternatives.begin(); it != prioritizedAlternatives.end(); ++it) {
+
+		// If the current position is not yet taken by any neighbor
+		if (std::find(takenPositions.begin(), takenPositions.end(), *it) == takenPositions.end()) {
+			for (int j = 0; j < this->regions.size(); j++) {
+				// and it is not crossing any of the boundaries
+				if (j == 0 && agent->getX() < this->regions.at(j).getUpperBound() && this->regions.at(j).getUpperBound() - off <= (*it).first) {
+					// Using Compare-and-Swap in each scenario here to prevent a race condition
+					while (1) {
+						bool true_bool;
+						bool false_bool;
+						bool retval;
+						true_bool = true; 
+						false_bool = false;
+						if (allowedToPush.compare_exchange_strong(true_bool, false_bool, std::memory_order_release, std::memory_order_relaxed)) {
+							this->agent_queue.push_back(i);
+							true_bool = true; 
+							false_bool = false;
+							allowedToPush.compare_exchange_weak(false_bool, true_bool, std::memory_order_release, std::memory_order_relaxed);
+							return false;
+						}
+					}
+					
+				} else if (j == this->regions.size()-1 && this->regions.at(j).getLowerBound() <= agent->getX() && (*it).first <= this->regions.at(j).getLowerBound() + off) {
+					while (1) {
+						bool true_bool;
+						bool false_bool;
+						bool retval;
+						true_bool = true; 
+						false_bool = false;
+						if (allowedToPush.compare_exchange_strong(true_bool, false_bool, std::memory_order_release, std::memory_order_relaxed)) {
+							this->agent_queue.push_back(i);
+							true_bool = true; 
+							false_bool = false;
+							allowedToPush.compare_exchange_weak(false_bool, true_bool, std::memory_order_release, std::memory_order_relaxed);
+							return false;
+						}
+					}
+				} else if (this->regions.at(j).getLowerBound() <= agent->getX() && agent->getX() < this->regions.at(j).getUpperBound() && (this->regions.at(j).getUpperBound() - off <= (*it).first || (*it).first <= this->regions.at(j).getLowerBound() + off)) {
+					while (1) {
+						bool true_bool;
+						bool false_bool;
+						bool retval;
+						true_bool = true; 
+						false_bool = false;
+						if (allowedToPush.compare_exchange_strong(true_bool, false_bool, std::memory_order_release, std::memory_order_relaxed)) {
+							this->agent_queue.push_back(i);
+							true_bool = true; 
+							false_bool = false;
+							allowedToPush.compare_exchange_weak(false_bool, true_bool, std::memory_order_release, std::memory_order_relaxed);
+							return false;
+						}
+					}
+				}
+			}
+
+			// then the agent's new position is set
+			agent->setX((*it).first);
+			agent->setY((*it).second);
+			return true;
+		}
+	}
+	return true;
+}
+
 
 ////////////
 /// Everything below here relevant for Assignment 3.

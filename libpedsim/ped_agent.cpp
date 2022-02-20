@@ -5,14 +5,15 @@
 //
 // Adapted for Low Level Parallel Programming 2017
 //
+
+// This file is kept the same since we refactored the code away from it
+
 #include "ped_agent.h"
 #include "ped_waypoint.h"
 #include <math.h>
 
 #include <stdlib.h>
 #include <iostream>
-
-// This file is kept the same since we refactored the code away from it
 
 Ped::Tagent::Tagent(int posX, int posY) {
 	Ped::Tagent::init(posX, posY);

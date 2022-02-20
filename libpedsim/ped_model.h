@@ -15,6 +15,7 @@
 #include <map>
 #include <set>
 #include <omp.h>
+#include <atomic>
 
 #include "ped_agent.h"
 #include "ped_agents.h"
@@ -80,9 +81,7 @@ namespace Ped{
 		// Index of agent to move between regions
 		deque<int> agent_queue;
 
-		// Denotes which implementation (sequential, parallel implementations..)
-		// should be used for calculating the desired positions of
-		// agents (Assignment 1)
+		// Denotes which implementation should be used
 		IMPLEMENTATION implementation;
 
 		// The number of threads used
@@ -101,7 +100,8 @@ namespace Ped{
 
 		// The time keeping track of when to update the regions
 		int time;
-
+		std::atomic<bool> allowedToPush;
+		 
 		// This function moves an agent towards its next position
 		void moveAllAgentsInRegions();
 
@@ -114,7 +114,8 @@ namespace Ped{
 		Ped::Region mergeRegions(Region r1, Region r2);
 
 		// The parallelized and standard move functions, respectively
-		bool moveParallel(Ped::Tagent *agent, int i);
+		bool moveLock(Ped::Tagent *agent, int i);
+		bool moveCAS(Ped::Tagent *agent, int i);
 		void move(Ped::Tagent *agent);
 
 		// Returns the set of neighboring agents for the specified position
