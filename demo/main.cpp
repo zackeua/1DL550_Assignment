@@ -53,7 +53,7 @@ int main(int argc, char*argv[]) {
 			}
 			else if (strcmp(&argv[i][2], "help") == 0)
 			{
-				cout << "Usage: " << argv[0] << " [--help] [--timing-mode] [--threads X (number of threads)] [--split-factor X] [--merge-factor X] [-impl implementation (SEQ, OMP, PTHREAD, VECTOR, CUDA, SEQ1, SEQ2, MOVE_SEQ, MOVE_CONSTANT, MOVE_ADAPTIVE)] [scenario]" << endl;
+				cout << "Usage: " << argv[0] << " [--help] [--timing-mode] [--threads X (number of threads)] [--split-factor X] [--merge-factor X] [-impl implementation (SEQ, OMP, PTHREAD, VECTOR, CUDA, SEQ1, SEQ2, MOVE_SEQ, MOVE_CONSTANT, MOVE_ADAPTIVE, SEQ_HEATMAP, CUDA_HEATMAP)] [scenario]" << endl;
 				return 0;
 			}
 			else if (strcmp(&argv[i][2], "threads") == 0) {
@@ -123,6 +123,16 @@ int main(int argc, char*argv[]) {
 				{
 					implementation_to_test = Ped::MOVE_ADAPTIVE;
 					std::cout << "Implementation: MOVE_ADAPTIVE" << std::endl;
+				}
+				else if (strcmp(argv[i], "SEQ_HEATMAP") == 0)
+				{
+					implementation_to_test = Ped::SEQ_HEATMAP;
+					std::cout << "Implementation: SEQ_HEATMAP" << std::endl;
+				}
+				else if (strcmp(argv[i], "CUDA_HEATMAP") == 0)
+				{
+					implementation_to_test = Ped::CUDA_HEATMAP;
+					std::cout << "Implementation: CUDA_HEATMAP" << std::endl;
 				}
 				else {
 					implementation_to_test = Ped::SEQ;

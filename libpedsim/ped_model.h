@@ -29,7 +29,7 @@ namespace Ped{
 	// SEQ1 is the standard sequential one, and SEQ is the memory-aligned one.
 	// The MOVE implemntations run the move function, and MOVE_CONSTANT and MOVE_ADAPTIVE
 	// run with a constant and adaptive number of regions, respectively.
-	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ, SEQ1, MOVE_SEQ, MOVE_CONSTANT, MOVE_ADAPTIVE };
+	enum IMPLEMENTATION { CUDA, VECTOR, OMP, PTHREAD, SEQ, SEQ1, MOVE_SEQ, MOVE_CONSTANT, MOVE_ADAPTIVE, SEQ_HEATMAP, CUDA_HEATMAP };
 
 	class Model
 	{
@@ -140,6 +140,10 @@ namespace Ped{
 
 		void setupHeatmapSeq();
 		void updateHeatmapSeq();
+
+		void setupHeatmapCUDA();
+		void updateHeatmapCUDA();
+
 	};
 }
 #endif

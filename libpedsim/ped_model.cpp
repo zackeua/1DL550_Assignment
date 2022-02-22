@@ -42,7 +42,7 @@ void Ped::Model::thread_tick(Ped::Model* model, int thread_id) {
 
 void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<Twaypoint*> destinationsInScenario, IMPLEMENTATION implementation, int num_threads, double split_factor, double merge_factor) {
 	// Testing if CUDA works on this machine
-	// cuda_test();
+	cuda_test();
 
 	// Setting up the agents in this scenario
 	agents = std::vector<Ped::Tagent*>(agentsInScenario.begin(), agentsInScenario.end());
@@ -273,6 +273,31 @@ void Ped::Model::tick() {
 			}
 		
 			break;
+
+		// The sequential heatmap implementation
+		case IMPLEMENTATION::SEQ_HEATMAP:
+			{
+				for (int i = 0; i < agents.size(); i++) {
+					agents[i]->computeNextDesiredPosition();
+					move(agents[i]); // Avoiding the collisions
+				}
+			updateHeatmapSeq();
+			}
+			
+			break;
+
+		// The sequential heatmap implementation
+		case IMPLEMENTATION::CUDA_HEATMAP:
+			{
+				for (int i = 0; i < agents.size(); i++) {
+					agents[i]->computeNextDesiredPosition();
+					move(agents[i]); // Avoiding the collisions
+				}
+			updateHeatmapCUDA();
+			}
+			
+			break;
+
 	}
 	// Stepping the time for the adaptRegions to know when to update
 	time++;
