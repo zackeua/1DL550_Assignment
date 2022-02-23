@@ -24,6 +24,17 @@ Ped::Cuagents::Cuagents(Ped::Tagents* agents_array) {
 	cudaMemcpy(this->x, agents_array->x, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
 	cudaMemcpy(this->y, agents_array->y, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
 
+	
+	// Allocating the agent desired position on the processor
+	cudaMalloc((void**)&this->desiredX, sizeof(float) * agents_array->agents.size());
+    cudaMalloc((void**)&this->desiredY, sizeof(float) * agents_array->agents.size());
+
+	// Copying them to the graphics card
+	cudaMemcpy(this->desiredX, agents_array->desiredX, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
+	cudaMemcpy(this->desiredX, agents_array->desiredX, sizeof(float) * agents_array->agents.size(), cudaMemcpyHostToDevice);
+
+
+
 	// Allocating the agent destinations on the processor
 	cudaMalloc((void**)&this->dest_x, sizeof(float) * agents_array->agents.size());
     cudaMalloc((void**)&this->dest_y, sizeof(float) * agents_array->agents.size());

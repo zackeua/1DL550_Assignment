@@ -41,6 +41,10 @@ namespace Ped {
 		float* x;
 		float* y;
 
+		// The agents' desired positions
+		float* desiredX;
+		float* desiredY;
+
 		// The agents' destinations and the acceptance radius
 		float* dest_x;
 		float* dest_y;

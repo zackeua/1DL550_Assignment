@@ -28,28 +28,39 @@ __global__ void fadeHeatmapCUDA(int* heatmap) {
 	}
 }
 
+__global__ void incrementHeatCUDA(int numberOfAgents, int* heatmap, float* desiredX, float* desiredY) {
+	//Count how many agents want to go to each location
+	for (int i = 0; i < numberOfAgents; i++) {
+		int x = desiredX[i];
+		int y = desiredY[i];
+
+		if (x < 0 || x >= SIZE || y < 0 || y >= SIZE)
+		{
+			continue;
+		}
+
+		// intensify heat for better color results
+		heatmap[y * SIZE + x] += 40;
+
+	}
+
+}
+
 
 // Updates the heatmap according to the agent positions
 void Ped::Model::updateHeatmapCUDA()
 {
-	fadeHeatmapCUDA <<<1024, 1024>>> (*this->heatmap);
 
-// 	// Count how many agents want to go to each location
-// 	for (int i = 0; i < agents.size(); i++)
-// 	{
-// 		Ped::Tagent* agent = agents[i];
-// 		int x = agent->getDesiredX();
-// 		int y = agent->getDesiredY();
+	// Setting the number of threads
+	int number_of_blocks = 100;
+	int threads_per_block = 100;
+	
 
-// 		if (x < 0 || x >= SIZE || y < 0 || y >= SIZE)
-// 		{
-// 			continue;
-// 		}
+	fadeHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (*this->heatmap);
 
-// 		// intensify heat for better color results
-// 		heatmap[y][x] += 40;
 
-// 	}
+	incrementHeatCUDA <<<number_of_blocks, threads_per_block>>> (this->agents.size(), *this->heatmap, this->cuda_array->desiredX, this->cuda_array->desiredY);
+
 
 // 	for (int x = 0; x < SIZE; x++)
 // 	{
