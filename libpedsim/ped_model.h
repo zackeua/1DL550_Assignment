@@ -138,6 +138,8 @@ namespace Ped{
 		// The final heatmap: blurred and scaled to fit the view
 		int ** blurred_heatmap;
 
+		int** blurred_cuda;
+
 		void setupHeatmapSeq();
 		void updateHeatmapSeq();
 

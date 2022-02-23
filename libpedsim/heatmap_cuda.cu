@@ -16,10 +16,17 @@ using namespace std;
 // Sets up the heatmap
 void Ped::Model::setupHeatmapCUDA()
 {
+	int *bhm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
+	blurred_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
+	for (int i = 0; i < SCALED_SIZE; i++)
+	{
+		blurred_heatmap[i] = bhm + SCALED_SIZE*i;
+	}
+
 	// Allocationg memory on GPU
 	cudaMalloc((void**)&heatmap, sizeof(int) * SIZE * SIZE);
 	cudaMalloc((void**)&scaled_heatmap, sizeof(int) * SCALED_SIZE * SCALED_SIZE);
-	cudaMalloc((void**)&blurred_heatmap, sizeof(int) * SCALED_SIZE * SCALED_SIZE);
+	cudaMalloc((void**)&blurred_cuda, sizeof(int) * SCALED_SIZE * SCALED_SIZE);
 }
 
 __global__ void fadeHeatmapCUDA(int* heatmap) {
@@ -59,8 +66,9 @@ void Ped::Model::updateHeatmapCUDA()
 	fadeHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (*this->heatmap);
 
 
-	incrementHeatCUDA <<<number_of_blocks, threads_per_block>>> (this->agents.size(), *this->heatmap, this->cuda_array->desiredX, this->cuda_array->desiredY);
+	incrementHeatCUDA <<<number_of_blocks, threads_per_block>>> (this->agents.size(), *this->heatmap, this->cuda_array.desiredX, this->cuda_array.desiredY);
 
+	cudaMemcpy(this->blurred_heatmap, this->blurred_cuda, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
 
 // 	for (int x = 0; x < SIZE; x++)
 // 	{
