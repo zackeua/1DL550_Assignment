@@ -142,7 +142,7 @@ namespace Ped{
 		void updateHeatmapSeq();
 
 		void setupHeatmapCUDA();
-		void updateHeatmapCUDA();
+		void updateHeatmapCUDA();		
 
 	};
 }
