@@ -98,8 +98,13 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 		}
 	}
 
-	// Setting up the heatmap (Relevant for Assignment 4)
+	// // Setting up the heatmap (Relevant for Assignment 4)
+	// if (this->implementation == IMPLEMENTATION::SEQ_HEATMAP) {
 	setupHeatmapSeq();
+	// } else if (this->implementation == IMPLEMENTATION::CUDA_HEATMAP) {
+	// }
+	setupHeatmapCUDA();
+
 }
 
 void Ped::Model::tick() {

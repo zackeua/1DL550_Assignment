@@ -131,14 +131,18 @@ namespace Ped{
 
 		// The heatmap representing the density of agents
 		int ** heatmap;
+		int* heatmap_cuda;
+
 
 		// The scaled heatmap that fits to the view
 		int ** scaled_heatmap;
+		int* scaled_heatmap_cuda;
 
 		// The final heatmap: blurred and scaled to fit the view
 		int ** blurred_heatmap;
 
-		int** blurred_cuda;
+
+		int* blurred_heatmap_cuda;
 
 		void setupHeatmapSeq();
 		void updateHeatmapSeq();

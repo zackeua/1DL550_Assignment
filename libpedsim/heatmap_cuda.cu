@@ -15,16 +15,16 @@ using namespace std;
 
 // Sets up the heatmap
 void Ped::Model::setupHeatmapCUDA() {
-	int *bhm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
-	blurred_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
-	for (int i = 0; i < SCALED_SIZE; i++) {
-		blurred_heatmap[i] = bhm + SCALED_SIZE*i;
-	}
+	// int *bhm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
+	// blurred_heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
+	// for (int i = 0; i < SCALED_SIZE; i++) {
+	// 	blurred_heatmap[i] = bhm + SCALED_SIZE*i;
+	// }
 
 	// Allocationg memory on GPU
-	cudaMalloc((void**)&heatmap, sizeof(int) * SIZE * SIZE);
-	cudaMalloc((void**)&scaled_heatmap, sizeof(int) * SCALED_SIZE * SCALED_SIZE);
-	cudaMalloc((void**)&blurred_cuda, sizeof(int) * SCALED_SIZE * SCALED_SIZE);
+	cudaMalloc((void**)&heatmap_cuda, sizeof(int) * SIZE * SIZE);
+	cudaMalloc((void**)&scaled_heatmap_cuda, sizeof(int) * SCALED_SIZE * SCALED_SIZE);
+	cudaMalloc((void**)&blurred_heatmap_cuda, sizeof(int) * SCALED_SIZE * SCALED_SIZE);
 }
 
 __global__ void fadeHeatmapCUDA(int* heatmap) {
@@ -62,8 +62,8 @@ __global__ void scaledHeatmapCUDA(int* heatmap, int* scaled_heatmap) {
 	}
 }
 
-__global__ void blurredHeatmapCUDA(int* blurred_cuda, int* scaled_heatmap) {
-	// Weights for blur filter
+__global__ void blurredHeatmapCUDA(int* scaled_heatmap, int* blurred_cuda) {
+	//Weights for blur filter
 	const int w[5][5] = {
 		{ 1, 4, 7, 4, 1 },
 		{ 4, 16, 26, 16, 4 },
@@ -75,7 +75,7 @@ __global__ void blurredHeatmapCUDA(int* blurred_cuda, int* scaled_heatmap) {
 	#define WEIGHTSUM 273
 	#define OFFSET SCALED_SIZE * 2 + 2
 	// Apply Gaussian blurfilter
-	for (int i = 0; i < (SCALED_SIZE - 2) * (SCALED_SIZE - 2); i++) {
+	for (int i = 0; i < (SCALED_SIZE - 2) * (SCALED_SIZE - 2)-1; i++) {
 		int sum = 0;
 		for (int k = -2; k < 3; k++)
 			for (int l = -2; l < 3; l++)
@@ -92,15 +92,72 @@ void Ped::Model::updateHeatmapCUDA() {
 	int number_of_blocks = 100;
 	int threads_per_block = 100;
 	
-	fadeHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (*this->heatmap);
+	// Allocating the CUDA status
+	cudaError_t cudaStatus;
 
-	incrementHeatCUDA <<<number_of_blocks, threads_per_block>>> (this->agents.size(), *this->heatmap, this->cuda_array.desiredX, this->cuda_array.desiredY);
+	// Setting the CUDA device
+	cudaStatus = cudaSetDevice(0);
 
-	capHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (*this->heatmap);
+	// Checking if that worked
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaSetDevice0 failed!\n");
+		return;
+	}
+
+	fadeHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (this->heatmap_cuda);
+
+	// Synchronizing the threads
+	cudaStatus = cudaDeviceSynchronize();
+
+	// Checking if that worked
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaSetDevice1 failed!\n");
+		fprintf(stderr, "%d\n", cudaStatus);
+		return;
+	}
+
+	incrementHeatCUDA <<<number_of_blocks, threads_per_block>>> (this->agents.size(), this->heatmap_cuda, this->cuda_array.desiredX, this->cuda_array.desiredY);
+
+	// Synchronizing the threads
+	cudaStatus = cudaDeviceSynchronize();
+
+	// Checking if that worked
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaSetDevice2 failed!\n");
+		fprintf(stderr, "%d\n", cudaStatus);
+		
+		return;
+	}
+
+	capHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (this->heatmap_cuda);
 	
-	scaledHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (*this->heatmap, *this->scaled_heatmap);
-	
-	blurredHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (*this->blurred_cuda, *this->scaled_heatmap);
+	// Synchronizing the threads
+	cudaStatus = cudaDeviceSynchronize();
 
-	cudaMemcpy(this->blurred_heatmap, this->blurred_cuda, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
+	// Checking if that worked
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaSetDevice3 failed!\n");
+		fprintf(stderr, "%d\n", cudaStatus);
+		
+		return;
+	}
+
+	scaledHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (this->heatmap_cuda, this->scaled_heatmap_cuda);
+	
+	//blurredHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (this->scaled_heatmap_cuda, this->blurred_heatmap_cuda);
+
+	// Synchronizing the threads
+	cudaStatus = cudaDeviceSynchronize();
+	
+	// Checking if that worked
+	if (cudaStatus != cudaSuccess) {
+		fprintf(stderr, "cudaSetDevice4 failed!\n");
+		fprintf(stderr, "%d\n", cudaStatus);
+		
+		return;
+	}
+
+	printf("HEJ OGGE");
+
+	cudaMemcpy(this->blurred_heatmap[0], this->blurred_heatmap_cuda, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
 }
