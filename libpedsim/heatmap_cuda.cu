@@ -86,23 +86,54 @@ __global__ void blurredHeatmapCUDA(int* scaled_heatmap, int* blurred_cuda) {
 	// 	int value = sum / WEIGHTSUM;
 	// 	blurred_cuda[i] = 0x00FF0000 | value << 24;
 	// }
+	// for (int block = blockIdx.x; block < 2; block += 1) {
+	// 	int* shm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
+
+	// 	__shared__ int** heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
+
+	// 	for (int i = 0; i < SCALED_SIZE; i++)
+	// 	{
+	// 		heatmap[i] = shm + SCALED_SIZE*i;
+	// 	}
+
+	int block = blockIdx.x;
+
+	__shared__ int heatmap[SCALED_SIZE*SCALED_SIZE/blockDim.x + SCALED_SIZE*4 +4];
+	for (int i = 0; i < SCALED_SIZE*SCALED_SIZE/blockDim.x + SCALED_SIZE*4 +4; i++) {
+		int offset = -2 * SCALED_SIZE;
+		if (block == 0) {
+			offset = 0;
+		} else if (block == blockDim.x -1) {
+			offset = -4 * SCALED_SIZE;
+		}
+		heatmap[i] = scaled_heatmap[i +SCALED_SIZE*SCALED_SIZE/blockDim.x * block + offset];
+	}
+
+
 
 		// Apply Gaussian blurfilter
-	for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < (SCALED_SIZE) * (SCALED_SIZE); i += blockDim.x * gridDim.x) {
+	for (int i = blockDim.x + threadIdx.x; i < (SCALED_SIZE) * (SCALED_SIZE); i += blockDim.x) {
 		if (i < SCALED_SIZE * 2 || i > SCALED_SIZE * (SCALED_SIZE-2) || i % SCALED_SIZE < 2 || i % SCALED_SIZE > (SCALED_SIZE - 2))
 			continue;
 		
-
 		int sum = 0;
 		for (int k = -2; k < 3; k++)
-			for (int l = -2; l < 3; l++)
-				sum += w[2 + k][2 + l] * scaled_heatmap[i + l + k * SCALED_SIZE];
+			for (int l = -2; l < 3; l++) {
+				int offset = 2 * SCALED_SIZE;
+				if (block == 0) {
+					offset = 0;
+				} else if (block == blockDim.x -1) {
+					offset = 4 * SCALED_SIZE;
+				}
+				sum += w[2 + k][2 + l] * heatmap[offset + i + l + k * SCALED_SIZE];
+				//sum += w[2 + k][2 + l] * scaled_heatmap[i + l + k * SCALED_SIZE];
+			}
 
 
 		int value = sum / WEIGHTSUM;
 		blurred_cuda[i] = 0x00FF0000 | value << 24;
 	}
-
+	// }
 
 }
 
@@ -126,70 +157,70 @@ void Ped::Model::updateHeatmapCUDA() {
 
 	fadeHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (this->heatmap_cuda);
 
-	// Synchronizing the threads
-	cudaStatus = cudaDeviceSynchronize();
+	// // Synchronizing the threads
+	// cudaStatus = cudaDeviceSynchronize();
 
-	// Checking if that worked
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaSetDevice1 failed!\n");
-		fprintf(stderr, "%d\n", cudaStatus);
-		return;
-	}
+	// // Checking if that worked
+	// if (cudaStatus != cudaSuccess) {
+	// 	fprintf(stderr, "cudaSetDevice1 failed!\n");
+	// 	fprintf(stderr, "%d\n", cudaStatus);
+	// 	return;
+	// }
 
 	cudaMemcpy(this->cuda_array.desiredX, this->agents_array->desiredX, this->agents.size() * sizeof(float), cudaMemcpyHostToDevice);
 	cudaMemcpy(this->cuda_array.desiredY, this->agents_array->desiredY, this->agents.size() * sizeof(float), cudaMemcpyHostToDevice);
 
 	incrementHeatCUDA <<<number_of_blocks, threads_per_block>>> (this->agents.size(), this->heatmap_cuda, this->cuda_array.desiredX, this->cuda_array.desiredY);
 
-	// Synchronizing the threads
-	cudaStatus = cudaDeviceSynchronize();
+	// // Synchronizing the threads
+	// cudaStatus = cudaDeviceSynchronize();
 
-	// Checking if that worked
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaSetDevice2 failed!\n");
-		fprintf(stderr, "%d\n", cudaStatus);
+	// // Checking if that worked
+	// if (cudaStatus != cudaSuccess) {
+	// 	fprintf(stderr, "cudaSetDevice2 failed!\n");
+	// 	fprintf(stderr, "%d\n", cudaStatus);
 		
-		return;
-	}
+	// 	return;
+	// }
 
 	capHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (this->heatmap_cuda);
 	
-	// Synchronizing the threads
-	cudaStatus = cudaDeviceSynchronize();
+	// // Synchronizing the threads
+	// cudaStatus = cudaDeviceSynchronize();
 
-	// Checking if that worked
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaSetDevice3 failed!\n");
-		fprintf(stderr, "%d\n", cudaStatus);
+	// // Checking if that worked
+	// if (cudaStatus != cudaSuccess) {
+	// 	fprintf(stderr, "cudaSetDevice3 failed!\n");
+	// 	fprintf(stderr, "%d\n", cudaStatus);
 		
-		return;
-	}
+	// 	return;
+	// }
 
 	scaledHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (this->heatmap_cuda, this->scaled_heatmap_cuda);
 	
-	// Synchronizing the threads
-	cudaStatus = cudaDeviceSynchronize();
+	// // Synchronizing the threads
+	// cudaStatus = cudaDeviceSynchronize();
 	
-	// Checking if that worked
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaSetDevice4 failed!\n");
-		fprintf(stderr, "%d\n", cudaStatus);
+	// // Checking if that worked
+	// if (cudaStatus != cudaSuccess) {
+	// 	fprintf(stderr, "cudaSetDevice4 failed!\n");
+	// 	fprintf(stderr, "%d\n", cudaStatus);
 		
-		return;
-	}
+	// 	return;
+	// }
 
 	blurredHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (this->scaled_heatmap_cuda, this->blurred_heatmap_cuda);
 
-	// Synchronizing the threads
-	cudaStatus = cudaDeviceSynchronize();
+	// // Synchronizing the threads
+	// cudaStatus = cudaDeviceSynchronize();
 	
-	// Checking if that worked
-	if (cudaStatus != cudaSuccess) {
-		fprintf(stderr, "cudaSetDevice5 failed!\n");
-		fprintf(stderr, "%d\n", cudaStatus);
+	// // Checking if that worked
+	// if (cudaStatus != cudaSuccess) {
+	// 	fprintf(stderr, "cudaSetDevice5 failed!\n");
+	// 	fprintf(stderr, "%d\n", cudaStatus);
 		
-		return;
-	}
+	// 	return;
+	// }
 
 	// cudaMemcpy(this->blurred_heatmap[0], this->scaled_heatmap_cuda, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
 	cudaMemcpy(this->blurred_heatmap[0], this->blurred_heatmap_cuda, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
