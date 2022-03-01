@@ -85,8 +85,11 @@ void Ped::Model::updateHeatmapSeq()
 					scaled_heatmap[y * CELLSIZE + cellY][x * CELLSIZE + cellX] = value;
 				}
 			}
+			if (value != 0)
+				printf("scaled_heatmap[%d] = %d\n", y * SIZE + x, value);
 		}
 	}
+
 
 	// Weights for blur filter
 	const int w[5][5] = {
