@@ -287,6 +287,10 @@ void Ped::Model::tick() {
 					move(agents[i]); // Avoiding the collisions
 				}
 			updateHeatmapSeq();
+			
+				for (int i = 0; i < 100; i++)
+					for (int j = 0; j < 100; j++)
+						this->blurred_heatmap[100 + i][100 + j] = 0x00FF0000;
 			}
 			
 			break;
@@ -298,7 +302,11 @@ void Ped::Model::tick() {
 					agents[i]->computeNextDesiredPosition();
 					move(agents[i]); // Avoiding the collisions
 				}
-			updateHeatmapCUDA();
+				updateHeatmapCUDA();
+
+				for (int i = 0; i < 100; i++)
+					for (int j = 0; j < 100; j++)
+						this->blurred_heatmap[100 + i][100 + j] = 0x00FF0000;
 			}
 			
 			break;
