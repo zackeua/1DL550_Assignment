@@ -66,6 +66,9 @@ __global__ void scaledHeatmapCUDA(int* heatmap, int* scaled_heatmap) {
 
 __global__ void blurredHeatmapCUDA(int* scaled_heatmap, int* blurred_cuda) {
 	//Weights for blur filter
+	// printf("gridDim.x: %d\ngridDim.y: %d\nblockIdx.x: %d\nblockIdx.y: %d\nblockDim.x: %d\nblockDim.y: %d\nthreadIdx.x: %d\nthreadIdx.y: %d\n\n\n",
+	// 		gridDim.x, gridDim.y, blockIdx.x, blockIdx.y, blockDim.x, blockDim.y, threadIdx.x, threadIdx.y);
+
 	const int w[5][5] = {
 		{ 1, 4, 7, 4, 1 },
 		{ 4, 16, 26, 16, 4 },
@@ -77,43 +80,77 @@ __global__ void blurredHeatmapCUDA(int* scaled_heatmap, int* blurred_cuda) {
 	#define WEIGHTSUM 273
 	#define OFFSET SCALED_SIZE * 2 + 2
 	
+
+
+
 	// int block = blockIdx.x;
+	const int num_block = 80;
 
-	// __shared__ int heatmap[SCALED_SIZE*SCALED_SIZE/blockDim.x + SCALED_SIZE*4 +4];
-	// for (int i = 0; i < SCALED_SIZE*SCALED_SIZE/blockDim.x + SCALED_SIZE*4 +4; i++) {
-	// 	int offset = -2 * SCALED_SIZE;
-	// 	if (block == 0) {
-	// 		offset = 0;
-	// 	} else if (block == blockDim.x -1) {
-	// 		offset = -4 * SCALED_SIZE;
-	// 	}
-	// 	heatmap[i] = scaled_heatmap[i +SCALED_SIZE*SCALED_SIZE/blockDim.x * block + offset];
-	// }
+	const int shared_heatmap_size = SCALED_SIZE*SCALED_SIZE/num_block/num_block;
+	const int padded_heatmap_size = (SCALED_SIZE/num_block + 4)*(SCALED_SIZE/num_block + 4);
+									//SCALED_SIZE*SCALED_SIZE/num_block/num_block + ;
+	const int padded_side_length = SCALED_SIZE/num_block + 4;
+	const int side_length = SCALED_SIZE/num_block;					
 
+	__shared__ int heatmap[padded_heatmap_size];
 
+	int offset =  blockIdx.x * side_length + blockIdx.y * side_length * SCALED_SIZE - 2 - 2 * SCALED_SIZE;
 
-		// Apply Gaussian blurfilter
-	for (int i =  blockIdx.x * blockDim.x + threadIdx.x; i < SCALED_SIZE * SCALED_SIZE; i += blockDim.x * gridDim.x) {
-		if (i < SCALED_SIZE * 2 || i > SCALED_SIZE * (SCALED_SIZE-2) || i % SCALED_SIZE < 2 || i % SCALED_SIZE > (SCALED_SIZE - 2))
-			continue;
-		
-		int sum = 0;
-		for (int k = -2; k < 3; k++)
-			for (int l = -2; l < 3; l++) {
-				// int offset = 2 * SCALED_SIZE;
-				// if (block == 0) {
-				// 	offset = 0;
-				// } else if (block == blockDim.x -1) {
-				// 	offset = 4 * SCALED_SIZE;
-				// }
-				//sum += w[2 + k][2 + l] * heatmap[offset + i + l + k * SCALED_SIZE];
-				sum += w[2 + k][2 + l] * scaled_heatmap[i + l + k * SCALED_SIZE];
-			}
-
-
-		int value = sum / WEIGHTSUM;
-		blurred_cuda[i] = 0x00FF0000 | value << 24;
+	for (int y = 0; y < padded_side_length; y++) {
+		for (int x = 0; x < padded_side_length; x++) {
+			if (0 <= y*SCALED_SIZE + x + offset && y*SCALED_SIZE + x + offset < SCALED_SIZE * SCALED_SIZE)
+				heatmap[y * padded_side_length + x] = scaled_heatmap[y*SCALED_SIZE + x + offset];
+		}
 	}
+
+
+
+	for	(int y = threadIdx.y; y < padded_side_length; y += blockDim.y) {
+		for	(int x = threadIdx.x; x < padded_side_length; x += blockDim.x) { // loop over pixels in local grid
+			int idx = y*SCALED_SIZE + x + offset;
+
+			if (idx < SCALED_SIZE * 2 || idx > SCALED_SIZE * (SCALED_SIZE-2) || idx % SCALED_SIZE < 2 || idx % SCALED_SIZE > (SCALED_SIZE - 2))
+				continue;
+
+			int sum = 0;
+			for (int k = -2; k < 3; k++)
+				for (int l = -2; l < 3; l++) { // apply kernel
+					
+					//sum += w[2 + k][2 + l] * heatmap[y * padded_side_length + x + l + k * padded_side_length];
+					sum += w[2 + k][2 + l] * scaled_heatmap[y * SCALED_SIZE + x + l + k * SCALED_SIZE];
+					printf("%d", scaled_heatmap[y * SCALED_SIZE + x + l + k * SCALED_SIZE] - heatmap[y * padded_side_length + x + l + k * padded_side_length]);
+				}		
+			int value = sum / WEIGHTSUM;
+			blurred_cuda[idx] = 0x00FF0000 | value << 24;
+		}
+	}
+
+
+
+	// 	// Apply Gaussian blurfilter
+	// for (int i = threadIdx.y * blockDim.x + threadIdx.x; i < padded_side_length * padded_side_length; i += blockDim.y * blockDim.x) {
+	// 	int idx = i;
+		
+	// 	if (idx < SCALED_SIZE * 2 || idx > SCALED_SIZE * (SCALED_SIZE-2) || idx % SCALED_SIZE < 2 || idx % SCALED_SIZE > (SCALED_SIZE - 2)) {
+	// 		//printf("kancka\n");
+	// 		continue;
+	// 	}
+	// 	// else {
+	// 	// 	printf("pelle\n");
+	// 	// }
+		
+	// 	int sum = 0;
+	// 	for (int k = -2; k < 3; k++)
+	// 		for (int l = -2; l < 3; l++) {
+				
+	// 			sum += w[2 + k][2 + l] * heatmap[i + l + k * padded_side_length];
+	// 			//sum += w[2 + k][2 + l] * scaled_heatmap[i + l + k * SCALED_SIZE];
+	// 		}
+
+
+	// 	int value = sum / WEIGHTSUM;
+	// 	blurred_cuda[i + offset] = 0xFFFF0000; // | value << 24;
+	// }
 	// }
 
 }
@@ -190,9 +227,9 @@ void Ped::Model::updateHeatmapCUDA() {
 	// 	return;
 	// }
 
-	
-
-	blurredHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (this->scaled_heatmap_cuda, this->blurred_heatmap_cuda);
+	dim3 grid(80, 80);
+	dim3 block(1, 1);
+	blurredHeatmapCUDA <<<grid, block>>> (this->scaled_heatmap_cuda, this->blurred_heatmap_cuda);
 
 	// // Synchronizing the threads
 	// cudaStatus = cudaDeviceSynchronize();
