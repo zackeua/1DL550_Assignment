@@ -35,7 +35,9 @@ __global__ void incrementHeatCUDA(int numberOfAgents, int* heatmap, float* desir
 			continue;
 
 		// intensify heat for better color results
-		heatmap[y * SIZE + x] += 40;
+		// need atomic because multiple i may have same y and x
+		atomicAdd(&heatmap[y * SIZE + x], 40);
+		//heatmap[y * SIZE + x] += 40;
 		// printf("Heatmap[%f * SIZE + %f]: %d\n",desiredX[i], desiredY[i],  heatmap[y * SIZE + x]);
 	}
 
@@ -74,59 +76,38 @@ __global__ void blurredHeatmapCUDA(int* scaled_heatmap, int* blurred_cuda) {
 
 	#define WEIGHTSUM 273
 	#define OFFSET SCALED_SIZE * 2 + 2
-	// // Apply Gaussian blurfilter
-	// for (int i = blockIdx.x * blockDim.x + threadIdx.x; i < (SCALED_SIZE -2) * (SCALED_SIZE-2); i += blockDim.x * gridDim.x) {
-	// // for (int i = 0; i < (SCALED_SIZE - 2) * (SCALED_SIZE - 2); i++) {
-	// 	int sum = 0;
-	// 	for (int k = -2; k < 3; k++)
-	// 		for (int l = -2; l < 3; l++)
-	// 			sum += w[2 + k][2 + l] * scaled_heatmap[OFFSET + i % (SCALED_SIZE - 2) + l + k * SCALED_SIZE];
+	
+	// int block = blockIdx.x;
 
-
-	// 	int value = sum / WEIGHTSUM;
-	// 	blurred_cuda[i] = 0x00FF0000 | value << 24;
-	// }
-	// for (int block = blockIdx.x; block < 2; block += 1) {
-	// 	int* shm = (int*)malloc(SCALED_SIZE*SCALED_SIZE*sizeof(int));
-
-	// 	__shared__ int** heatmap = (int**)malloc(SCALED_SIZE*sizeof(int*));
-
-	// 	for (int i = 0; i < SCALED_SIZE; i++)
-	// 	{
-	// 		heatmap[i] = shm + SCALED_SIZE*i;
+	// __shared__ int heatmap[SCALED_SIZE*SCALED_SIZE/blockDim.x + SCALED_SIZE*4 +4];
+	// for (int i = 0; i < SCALED_SIZE*SCALED_SIZE/blockDim.x + SCALED_SIZE*4 +4; i++) {
+	// 	int offset = -2 * SCALED_SIZE;
+	// 	if (block == 0) {
+	// 		offset = 0;
+	// 	} else if (block == blockDim.x -1) {
+	// 		offset = -4 * SCALED_SIZE;
 	// 	}
-
-	int block = blockIdx.x;
-
-	__shared__ int heatmap[SCALED_SIZE*SCALED_SIZE/blockDim.x + SCALED_SIZE*4 +4];
-	for (int i = 0; i < SCALED_SIZE*SCALED_SIZE/blockDim.x + SCALED_SIZE*4 +4; i++) {
-		int offset = -2 * SCALED_SIZE;
-		if (block == 0) {
-			offset = 0;
-		} else if (block == blockDim.x -1) {
-			offset = -4 * SCALED_SIZE;
-		}
-		heatmap[i] = scaled_heatmap[i +SCALED_SIZE*SCALED_SIZE/blockDim.x * block + offset];
-	}
+	// 	heatmap[i] = scaled_heatmap[i +SCALED_SIZE*SCALED_SIZE/blockDim.x * block + offset];
+	// }
 
 
 
 		// Apply Gaussian blurfilter
-	for (int i = blockDim.x + threadIdx.x; i < (SCALED_SIZE) * (SCALED_SIZE); i += blockDim.x) {
+	for (int i =  blockIdx.x * blockDim.x + threadIdx.x; i < SCALED_SIZE * SCALED_SIZE; i += blockDim.x * gridDim.x) {
 		if (i < SCALED_SIZE * 2 || i > SCALED_SIZE * (SCALED_SIZE-2) || i % SCALED_SIZE < 2 || i % SCALED_SIZE > (SCALED_SIZE - 2))
 			continue;
 		
 		int sum = 0;
 		for (int k = -2; k < 3; k++)
 			for (int l = -2; l < 3; l++) {
-				int offset = 2 * SCALED_SIZE;
-				if (block == 0) {
-					offset = 0;
-				} else if (block == blockDim.x -1) {
-					offset = 4 * SCALED_SIZE;
-				}
-				sum += w[2 + k][2 + l] * heatmap[offset + i + l + k * SCALED_SIZE];
-				//sum += w[2 + k][2 + l] * scaled_heatmap[i + l + k * SCALED_SIZE];
+				// int offset = 2 * SCALED_SIZE;
+				// if (block == 0) {
+				// 	offset = 0;
+				// } else if (block == blockDim.x -1) {
+				// 	offset = 4 * SCALED_SIZE;
+				// }
+				//sum += w[2 + k][2 + l] * heatmap[offset + i + l + k * SCALED_SIZE];
+				sum += w[2 + k][2 + l] * scaled_heatmap[i + l + k * SCALED_SIZE];
 			}
 
 
@@ -208,6 +189,8 @@ void Ped::Model::updateHeatmapCUDA() {
 		
 	// 	return;
 	// }
+
+	
 
 	blurredHeatmapCUDA <<<number_of_blocks, threads_per_block>>> (this->scaled_heatmap_cuda, this->blurred_heatmap_cuda);
 
