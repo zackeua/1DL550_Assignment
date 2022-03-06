@@ -121,7 +121,7 @@ __global__ void blurredHeatmapCUDA(int* scaled_heatmap, int* blurred_cuda) {
 	// Blurring the results using a Gaussian blur filter.
 	for	(int y = threadIdx.y; y < side_length; y += blockDim.y) {
 		for	(int x = threadIdx.x; x < side_length; x += blockDim.x) {
-			// Translating the coordinates (x, y) to a one-dimensional coordinate 
+			// Translating the two-dimensional coordinates to a one-dimensional coordinate
 			int idx = y * SCALED_SIZE + x + offset;
 
 			// If the desired location is outside the box, then we jump to the next iteration

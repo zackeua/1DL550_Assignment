@@ -1,4 +1,3 @@
-//
 // pedsim - A microscopic pedestrian simulation system.
 // Copyright (c) 2003 - 2014 by Christian Gloor
 //
@@ -7,7 +6,7 @@
 // Model coordinates a time step in a scenario: for each
 // time step all agents need to be moved by one position if
 // possible.
-//
+
 #ifndef _ped_model_h_
 #define _ped_model_h_ 1
 
@@ -133,23 +132,21 @@ namespace Ped{
 		int ** heatmap;
 		int* heatmap_cuda;
 
-
 		// The scaled heatmap that fits to the view
 		int ** scaled_heatmap;
 		int* scaled_heatmap_cuda;
 
 		// The final heatmap: blurred and scaled to fit the view
 		int ** blurred_heatmap;
-
-
 		int* blurred_heatmap_cuda;
 
+		// The sequential heatmap functions
 		void setupHeatmapSeq();
 		void updateHeatmapSeq();
-
+		
+		// The sequential heatmap functions on the processor
 		void setupHeatmapCUDA();
 		void updateHeatmapCUDA();		
-
 	};
 }
 #endif

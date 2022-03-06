@@ -1,10 +1,9 @@
-//
 // pedsim - A microscopic pedestrian simulation system.
 // Copyright (c) 2003 - 2014 by Christian Gloor
 //
 //
 // Adapted for Low Level Parallel Programming 2017
-//
+
 #include "ped_model.h"
 #include "ped_waypoint.h"
 #include "ped_cuda.h"
@@ -98,13 +97,9 @@ void Ped::Model::setup(std::vector<Ped::Tagent*> agentsInScenario, std::vector<T
 		}
 	}
 
-	// // Setting up the heatmap (Relevant for Assignment 4)
-	// if (this->implementation == IMPLEMENTATION::SEQ_HEATMAP) {
+	// Setting up the heatmap (Relevant for Assignment 4)
 	setupHeatmapSeq();
-	// } else if (this->implementation == IMPLEMENTATION::CUDA_HEATMAP) {
-	// }
 	setupHeatmapCUDA();
-
 }
 
 void Ped::Model::tick() {
@@ -287,10 +282,6 @@ void Ped::Model::tick() {
 					move(agents[i]); // Avoiding the collisions
 				}
 			updateHeatmapSeq();
-			
-				// for (int i = 0; i < 100; i++)
-				// 	for (int j = 0; j < 100; j++)
-				// 		this->blurred_heatmap[100 + i][100 + j] = 0xFFFF0000;
 			}
 			
 			break;
@@ -305,10 +296,6 @@ void Ped::Model::tick() {
 
 				}
 				updateHeatmapCUDA();
-
-				// for (int i = 0; i < 100; i++)
-				// 	for (int j = 0; j < 100; j++)
-				// 		this->blurred_heatmap[100 + i][100 + j] = 0xFFFF0000;
 			}
 			
 			break;
