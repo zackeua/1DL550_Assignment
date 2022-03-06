@@ -59,16 +59,11 @@ __global__ void scaledHeatmapCUDA(int* heatmap, int* scaled_heatmap) {
 				scaled_heatmap[(i % SIZE) * CELLSIZE + cellX +
 				                (i / SIZE) * SCALED_SIZE * CELLSIZE + cellY * SCALED_SIZE] = value;
 			}
-		// if (value != 0)
-		// 	printf("scaled_heatmap[%d] = %d\n", i, value);
 	}
 }
 
 __global__ void blurredHeatmapCUDA(int* scaled_heatmap, int* blurred_cuda) {
 	//Weights for blur filter
-	// printf("gridDim.x: %d\ngridDim.y: %d\nblockIdx.x: %d\nblockIdx.y: %d\nblockDim.x: %d\nblockDim.y: %d\nthreadIdx.x: %d\nthreadIdx.y: %d\n\n\n",
-	// 		gridDim.x, gridDim.y, blockIdx.x, blockIdx.y, blockDim.x, blockDim.y, threadIdx.x, threadIdx.y);
-
 	const int w[5][5] = {
 		{ 1, 4, 7, 4, 1 },
 		{ 4, 16, 26, 16, 4 },
@@ -90,14 +85,15 @@ __global__ void blurredHeatmapCUDA(int* scaled_heatmap, int* blurred_cuda) {
 
 	__shared__ int shared_heatmap[padded_heatmap_size];
 
-	int offset =  blockIdx.x * side_length + blockIdx.y * side_length * SCALED_SIZE - 2 - 2 * SCALED_SIZE;
-
+	int offset =  blockIdx.x * side_length + blockIdx.y * side_length * SCALED_SIZE - 4 - 4 * SCALED_SIZE;
 
 	if (threadIdx.x == 0 && threadIdx.y == 0) {
 		for (int y = 0; y < padded_side_length; y++) {
 			for (int x = 0; x < padded_side_length; x++) {
 				if (0 <= y * SCALED_SIZE + x + offset && y * SCALED_SIZE + x + offset < SCALED_SIZE * SCALED_SIZE) {
 					shared_heatmap[y * padded_side_length + x] = scaled_heatmap[y * SCALED_SIZE + x + offset];
+				} else {
+					shared_heatmap[y * padded_side_length + x] = 0;
 				}
 			}
 		}
@@ -106,51 +102,23 @@ __global__ void blurredHeatmapCUDA(int* scaled_heatmap, int* blurred_cuda) {
 
 
 
-	for	(int y = threadIdx.y; y < padded_side_length; y += blockDim.y) {
-		for	(int x = threadIdx.x; x < padded_side_length; x += blockDim.x) { // loop over pixels in local grid
+	for	(int y = threadIdx.y; y < side_length; y += blockDim.y) {
+		for	(int x = threadIdx.x; x < side_length; x += blockDim.x) { // loop over pixels in local grid
 			int idx = y * SCALED_SIZE + x + offset;
 
 			if (idx < SCALED_SIZE * 2 || idx > SCALED_SIZE * (SCALED_SIZE-2) || idx % SCALED_SIZE < 2 || idx % SCALED_SIZE > (SCALED_SIZE - 2))
 				continue;
-
+			
 			int sum = 0;
 			for (int k = -2; k < 3; k++)
 				for (int l = -2; l < 3; l++) { // apply kernel
-					//shared_heatmap[y * padded_side_length + x + l + k * padded_side_length] = scaled_heatmap[y * SCALED_SIZE + x + offset + l + k * SCALED_SIZE];
-					sum += w[2 + k][2 + l] * shared_heatmap[y * padded_side_length + x + l + k * padded_side_length];
-					//sum += w[2 + k][2 + l] * scaled_heatmap[y * SCALED_SIZE + x + offset + l + k * SCALED_SIZE];
-				}		
+					sum += w[2 + k][2 + l] * shared_heatmap[2 + 2 * padded_side_length + y * padded_side_length + x + l + k * padded_side_length];
+				}
+
 			int value = sum / WEIGHTSUM;
 			blurred_cuda[y * SCALED_SIZE + x + offset] = 0x00FF0000 | value << 24;
 		}
 	}
-
-
-	// 	// Apply Gaussian blurfilter
-	// for (int i = threadIdx.y * blockDim.x + threadIdx.x; i < padded_side_length * padded_side_length; i += blockDim.y * blockDim.x) {
-	// 	int idx = i;
-		
-	// 	if (idx < SCALED_SIZE * 2 || idx > SCALED_SIZE * (SCALED_SIZE-2) || idx % SCALED_SIZE < 2 || idx % SCALED_SIZE > (SCALED_SIZE - 2)) {
-	// 		//printf("kancka\n");
-	// 		continue;
-	// 	}
-	// 	// else {
-	// 	// 	printf("pelle\n");
-	// 	// }
-		
-	// 	int sum = 0;
-	// 	for (int k = -2; k < 3; k++)
-	// 		for (int l = -2; l < 3; l++) {
-				
-	// 			sum += w[2 + k][2 + l] * heatmap[i + l + k * padded_side_length];
-	// 			//sum += w[2 + k][2 + l] * scaled_heatmap[i + l + k * SCALED_SIZE];
-	// 		}
-
-
-	// 	int value = sum / WEIGHTSUM;
-	// 	blurred_cuda[i + offset] = 0xFFFF0000; // | value << 24;
-	// }
-	// }
 
 }
 
@@ -227,7 +195,7 @@ void Ped::Model::updateHeatmapCUDA() {
 	// }
 
 	dim3 grid(80, 80);
-	dim3 block(1, 1);
+	dim3 block(10, 10);
 	blurredHeatmapCUDA <<<grid, block>>> (this->scaled_heatmap_cuda, this->blurred_heatmap_cuda);
 
 	// // Synchronizing the threads
@@ -244,15 +212,6 @@ void Ped::Model::updateHeatmapCUDA() {
 	// cudaMemcpy(this->blurred_heatmap[0], this->scaled_heatmap_cuda, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
 	cudaMemcpy(this->blurred_heatmap[0], this->blurred_heatmap_cuda, SCALED_SIZE * SCALED_SIZE * sizeof(int), cudaMemcpyDeviceToHost);
 	
-	// for (int i = 0; i < SCALED_SIZE; i++) {
-	// 	for (int j = 0; j < SCALED_SIZE; j++) {
-	// 		if (this->blurred_heatmap[i][j] != 0)
-	// 			printf("%d\n", this->blurred_heatmap[i][j]);
-	// 	}
-	// }
 	
-
-	int i;
-	std::cin >> i;
 
 }
